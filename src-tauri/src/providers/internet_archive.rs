@@ -68,6 +68,7 @@ pub fn parse_archive_search(raw_json: &str) -> Result<Vec<OnlineTrack>, AppError
                 album: "Internet Archive Audio".to_string(),
                 duration_ms: 0,
                 stream_url: None,
+                download_url: None,
                 artwork_url: Some(format!("https://archive.org/services/img/{id}")),
                 external_url: Some(format!("https://archive.org/details/{id}")),
                 license: doc.licenseurl,

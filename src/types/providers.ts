@@ -40,6 +40,7 @@ export interface OnlineTrack {
   album: string;
   duration_ms: number;
   stream_url: string | null;
+  download_url?: string | null;
   artwork_url: string | null;
   external_url: string | null;
   license: string | null;

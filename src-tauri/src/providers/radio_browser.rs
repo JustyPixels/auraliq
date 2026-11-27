@@ -55,6 +55,7 @@ pub fn parse_radio_stations(raw_json: &str) -> Result<Vec<OnlineTrack>, AppError
                 album,
                 duration_ms: 0,
                 stream_url: Some(stream),
+                download_url: None,
                 artwork_url,
                 external_url: None,
                 license: None,

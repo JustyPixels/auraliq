@@ -1,10 +1,11 @@
-import { ExternalLink, ListPlus, Music, Play, Search, Trash2 } from "lucide-react";
+import { Download, ExternalLink, ListPlus, Music, Play, Search, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { backendApi, formatDurationMs, isTauriRuntime } from "../api/backend";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { Panel } from "../components/Panel";
+import { useDownloadsStore } from "../stores/useDownloadsStore";
 import { useLibraryStore } from "../stores/useLibraryStore";
 import { usePlayerStore } from "../stores/usePlayerStore";
 import type { TrackRecord } from "../types/music";
@@ -46,10 +47,12 @@ export function SearchPage() {
   const [onlineResults, setOnlineResults] = useState<OnlineTrack[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const genres = useLibraryStore((state) => state.genres);
   const { playTrackList, playOnlineTrackList, addToQueue, addOnlineToQueue } = usePlayerStore();
+  const enqueueDownload = useDownloadsStore((state) => state.enqueueDownload);
   const inTauri = isTauriRuntime();
 
   useEffect(() => {
@@ -251,6 +254,11 @@ export function SearchPage() {
         title="Results"
         badge={<Badge>{searching ? "Searching..." : `${resultCount} results`}</Badge>}
       >
+        {downloadNotice && (
+          <p role="status" style={{ color: "var(--aq-accent)", marginTop: 0 }}>
+            {downloadNotice}
+          </p>
+        )}
         {searchError && (
           <p role="alert" style={{ color: "var(--aq-warn)", marginTop: 0 }}>
             {searchError}
@@ -344,6 +352,23 @@ export function SearchPage() {
                       >
                         <ListPlus size={14} />
                       </Button>
+                      {track.downloadable && (
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          aria-label={`Download ${track.title}`}
+                          title="Download permitted track"
+                          onClick={() => {
+                            void enqueueDownload(track).then((rec) => {
+                              if (rec) {
+                                setDownloadNotice(`Queued "${track.title}" for download.`);
+                              }
+                            });
+                          }}
+                        >
+                          <Download size={14} />
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>

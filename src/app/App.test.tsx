@@ -65,7 +65,8 @@ describe("App", () => {
     expect(screen.getByText("No Duplicate Recordings Detected")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Downloads" }));
-    expect(screen.getByText("Download Manager Scheduled")).toBeInTheDocument();
+    expect(screen.getByText("Download Queue")).toBeInTheDocument();
+    expect(screen.getByText("Temporary Playback Cache")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     fireEvent.click(screen.getByRole("tab", { name: "Providers" }));

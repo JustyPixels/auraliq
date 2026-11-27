@@ -65,6 +65,7 @@ pub fn parse_youtube_tracks(raw_json: &str) -> Result<Vec<OnlineTrack>, AppError
                 album: "YouTube Music".to_string(),
                 duration_ms: 0,
                 stream_url: None,
+                download_url: None,
                 artwork_url: item
                     .snippet
                     .thumbnails

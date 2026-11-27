@@ -165,3 +165,66 @@ pub struct SearchFilters {
     pub max_duration_sec: Option<i64>,
     pub favorites_only: Option<bool>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadRecord {
+    pub id: i64,
+    pub provider_id: String,
+    pub external_id: String,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub license: Option<String>,
+    pub artwork_url: Option<String>,
+    pub source_url: Option<String>,
+    pub target_path: String,
+    pub status: String,
+    pub bytes_downloaded: i64,
+    pub total_bytes: Option<i64>,
+    pub error_message: Option<String>,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadSettings {
+    pub download_dir: String,
+    pub max_concurrent: i64,
+    pub naming_template: String,
+    pub auto_tag: bool,
+    pub auto_add_to_library: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheEntryRecord {
+    pub cache_key: String,
+    pub provider_id: String,
+    pub external_id: String,
+    pub title: String,
+    pub artist: String,
+    pub file_path: String,
+    pub size_bytes: i64,
+    pub created_at: i64,
+    pub last_accessed_at: i64,
+    pub expires_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheSettings {
+    pub enabled: bool,
+    pub max_size_mb: i64,
+    pub ttl_hours: i64,
+    pub offline_mode: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheStats {
+    pub entry_count: usize,
+    pub total_bytes: i64,
+    pub max_bytes: i64,
+    pub enabled: bool,
+    pub max_size_mb: i64,
+    pub ttl_hours: i64,
+    pub offline_mode: bool,
+    pub cache_dir: String,
+}

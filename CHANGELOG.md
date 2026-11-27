@@ -5,6 +5,15 @@ All notable changes to **Auraliq** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-11-27
+
+### Added
+
+- **Milestone 9 (Download Manager & Cache)**:
+  - Source-aware Download Manager (`src-tauri/src/downloads/`) strictly gated by `capabilities().download` and `track.downloadable` (Internet Archive, CC-permitted Jamendo tracks), with SQLite persistence (migration v4), HTTP `Range` resume via `.part` files, pause/resume/retry/cancel, configurable concurrency (1–4), sanitized naming templates, `lofty` metadata tagging, and auto-add to local library.
+  - Strictly separated LRU Temporary Playback Cache (`src-tauri/src/cache/`) gated by `capabilities().offline_cache_allowed`, with configurable max size, TTL expiration, automatic LRU/orphan cleanup, and **Offline Mode** enforcement.
+  - Live `DownloadsPage`, permitted download buttons in `SearchPage`, and `Offline Mode` status badge in `AppShell`.
+
 ## [0.5.0] - 2026-11-27
 
 ### Added

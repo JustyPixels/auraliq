@@ -11,9 +11,10 @@ use crate::metadata::identity::{
     evaluate_smart_playlist, find_duplicate_groups, suggest_identity_links,
 };
 use models::{
-    AlbumSummary, ArtistSummary, CollectionRecord, DuplicateGroup, GenreSummary, LibraryFolder,
-    NewTrackData, PlaybackStateRecord, PlaylistRecord, SearchFilters, SmartPlaylistRecord,
-    SmartPlaylistRule, TrackIdentityLink, TrackRecord,
+    AlbumSummary, ArtistSummary, CacheEntryRecord, CacheSettings, CollectionRecord, DownloadRecord,
+    DownloadSettings, DuplicateGroup, GenreSummary, LibraryFolder, NewTrackData,
+    PlaybackStateRecord, PlaylistRecord, SearchFilters, SmartPlaylistRecord, SmartPlaylistRule,
+    TrackIdentityLink, TrackRecord,
 };
 
 pub struct Database {
@@ -878,6 +879,323 @@ impl Database {
         )?;
         Ok(())
     }
+
+    pub fn list_downloads(&self) -> Result<Vec<DownloadRecord>, AppError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, provider_id, external_id, title, artist, album, license, artwork_url,
+                    source_url, target_path, status, bytes_downloaded, total_bytes, error_message,
+                    created_at, updated_at
+             FROM downloads
+             ORDER BY created_at DESC, id DESC",
+        )?;
+        let rows = stmt.query_map([], row_to_download)?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
+
+    pub fn get_download(&self, id: i64) -> Result<Option<DownloadRecord>, AppError> {
+        self.conn
+            .query_row(
+                "SELECT id, provider_id, external_id, title, artist, album, license, artwork_url,
+                        source_url, target_path, status, bytes_downloaded, total_bytes, error_message,
+                        created_at, updated_at
+                 FROM downloads WHERE id = ?1",
+                params![id],
+                row_to_download,
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    pub fn next_queued_download(&self) -> Result<Option<DownloadRecord>, AppError> {
+        self.conn
+            .query_row(
+                "SELECT id, provider_id, external_id, title, artist, album, license, artwork_url,
+                        source_url, target_path, status, bytes_downloaded, total_bytes, error_message,
+                        created_at, updated_at
+                 FROM downloads WHERE status = 'queued' ORDER BY created_at ASC, id ASC LIMIT 1",
+                [],
+                row_to_download,
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn insert_download(
+        &self,
+        provider_id: &str,
+        external_id: &str,
+        title: &str,
+        artist: &str,
+        album: &str,
+        license: Option<&str>,
+        artwork_url: Option<&str>,
+        source_url: Option<&str>,
+        target_path: &str,
+    ) -> Result<DownloadRecord, AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "INSERT INTO downloads (
+                provider_id, external_id, title, artist, album, license, artwork_url,
+                source_url, target_path, status, bytes_downloaded, total_bytes, error_message,
+                created_at, updated_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'queued', 0, NULL, NULL, ?10, ?10)",
+            params![
+                provider_id,
+                external_id,
+                title,
+                artist,
+                album,
+                license,
+                artwork_url,
+                source_url,
+                target_path,
+                now
+            ],
+        )?;
+        let id = self.conn.last_insert_rowid();
+        self.get_download(id)?
+            .ok_or_else(|| AppError::Internal("Failed to load inserted download".to_string()))
+    }
+
+    pub fn update_download_status(
+        &self,
+        id: i64,
+        status: &str,
+        error_message: Option<&str>,
+    ) -> Result<(), AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "UPDATE downloads SET status = ?1, error_message = ?2, updated_at = ?3 WHERE id = ?4",
+            params![status, error_message, now, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_download_progress(
+        &self,
+        id: i64,
+        bytes_downloaded: i64,
+        total_bytes: Option<i64>,
+    ) -> Result<(), AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "UPDATE downloads SET bytes_downloaded = ?1, total_bytes = ?2, updated_at = ?3 WHERE id = ?4",
+            params![bytes_downloaded, total_bytes, now, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_download_source_url(&self, id: i64, source_url: &str) -> Result<(), AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "UPDATE downloads SET source_url = ?1, updated_at = ?2 WHERE id = ?3",
+            params![source_url, now, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_download(&self, id: i64) -> Result<(), AppError> {
+        self.conn
+            .execute("DELETE FROM downloads WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn clear_completed_downloads(&self) -> Result<usize, AppError> {
+        let count = self.conn.execute(
+            "DELETE FROM downloads WHERE status IN ('completed', 'canceled', 'failed')",
+            [],
+        )?;
+        Ok(count)
+    }
+
+    pub fn reset_interrupted_downloads(&self) -> Result<usize, AppError> {
+        let now = now_unix_secs();
+        let count = self.conn.execute(
+            "UPDATE downloads SET status = 'paused', updated_at = ?1 WHERE status = 'downloading'",
+            params![now],
+        )?;
+        Ok(count)
+    }
+
+    pub fn get_download_settings(&self, default_dir: &str) -> Result<DownloadSettings, AppError> {
+        let mut settings = self.conn.query_row(
+            "SELECT download_dir, max_concurrent, naming_template, auto_tag, auto_add_to_library
+             FROM download_settings WHERE id = 1",
+            [],
+            |row| {
+                Ok(DownloadSettings {
+                    download_dir: row.get(0)?,
+                    max_concurrent: row.get(1)?,
+                    naming_template: row.get(2)?,
+                    auto_tag: row.get::<_, i64>(3)? != 0,
+                    auto_add_to_library: row.get::<_, i64>(4)? != 0,
+                })
+            },
+        )?;
+        if settings.download_dir.trim().is_empty() {
+            settings.download_dir = default_dir.to_string();
+        }
+        Ok(settings)
+    }
+
+    pub fn save_download_settings(&self, settings: &DownloadSettings) -> Result<(), AppError> {
+        self.conn.execute(
+            "UPDATE download_settings
+             SET download_dir = ?1, max_concurrent = ?2, naming_template = ?3,
+                 auto_tag = ?4, auto_add_to_library = ?5
+             WHERE id = 1",
+            params![
+                settings.download_dir,
+                settings.max_concurrent.clamp(1, 4),
+                settings.naming_template,
+                i64::from(settings.auto_tag),
+                i64::from(settings.auto_add_to_library),
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_cache_entries(&self) -> Result<Vec<CacheEntryRecord>, AppError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT cache_key, provider_id, external_id, title, artist, file_path,
+                    size_bytes, created_at, last_accessed_at, expires_at
+             FROM cache_entries
+             ORDER BY last_accessed_at DESC",
+        )?;
+        let rows = stmt.query_map([], row_to_cache_entry)?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
+
+    pub fn get_cache_entry(&self, cache_key: &str) -> Result<Option<CacheEntryRecord>, AppError> {
+        self.conn
+            .query_row(
+                "SELECT cache_key, provider_id, external_id, title, artist, file_path,
+                        size_bytes, created_at, last_accessed_at, expires_at
+                 FROM cache_entries WHERE cache_key = ?1",
+                params![cache_key],
+                row_to_cache_entry,
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    pub fn upsert_cache_entry(&self, entry: &CacheEntryRecord) -> Result<(), AppError> {
+        self.conn.execute(
+            "INSERT INTO cache_entries (
+                cache_key, provider_id, external_id, title, artist, file_path,
+                size_bytes, created_at, last_accessed_at, expires_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            ON CONFLICT(cache_key) DO UPDATE SET
+                title = excluded.title,
+                artist = excluded.artist,
+                file_path = excluded.file_path,
+                size_bytes = excluded.size_bytes,
+                last_accessed_at = excluded.last_accessed_at,
+                expires_at = excluded.expires_at",
+            params![
+                entry.cache_key,
+                entry.provider_id,
+                entry.external_id,
+                entry.title,
+                entry.artist,
+                entry.file_path,
+                entry.size_bytes,
+                entry.created_at,
+                entry.last_accessed_at,
+                entry.expires_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn touch_cache_entry(&self, cache_key: &str, expires_at: i64) -> Result<(), AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "UPDATE cache_entries SET last_accessed_at = ?1, expires_at = ?2 WHERE cache_key = ?3",
+            params![now, expires_at, cache_key],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_cache_entry(&self, cache_key: &str) -> Result<(), AppError> {
+        self.conn.execute(
+            "DELETE FROM cache_entries WHERE cache_key = ?1",
+            params![cache_key],
+        )?;
+        Ok(())
+    }
+
+    pub fn clear_cache_entries(&self) -> Result<usize, AppError> {
+        let count = self.conn.execute("DELETE FROM cache_entries", [])?;
+        Ok(count)
+    }
+
+    pub fn get_cache_settings(&self) -> Result<CacheSettings, AppError> {
+        self.conn
+            .query_row(
+                "SELECT enabled, max_size_mb, ttl_hours, offline_mode FROM cache_settings WHERE id = 1",
+                [],
+                |row| {
+                    Ok(CacheSettings {
+                        enabled: row.get::<_, i64>(0)? != 0,
+                        max_size_mb: row.get(1)?,
+                        ttl_hours: row.get(2)?,
+                        offline_mode: row.get::<_, i64>(3)? != 0,
+                    })
+                },
+            )
+            .map_err(Into::into)
+    }
+
+    pub fn save_cache_settings(&self, settings: &CacheSettings) -> Result<(), AppError> {
+        self.conn.execute(
+            "UPDATE cache_settings SET enabled = ?1, max_size_mb = ?2, ttl_hours = ?3, offline_mode = ?4 WHERE id = 1",
+            params![
+                i64::from(settings.enabled),
+                settings.max_size_mb.clamp(32, 8192),
+                settings.ttl_hours.clamp(1, 720),
+                i64::from(settings.offline_mode),
+            ],
+        )?;
+        Ok(())
+    }
+}
+
+fn row_to_download(row: &Row<'_>) -> rusqlite::Result<DownloadRecord> {
+    Ok(DownloadRecord {
+        id: row.get(0)?,
+        provider_id: row.get(1)?,
+        external_id: row.get(2)?,
+        title: row.get(3)?,
+        artist: row.get(4)?,
+        album: row.get(5)?,
+        license: row.get(6)?,
+        artwork_url: row.get(7)?,
+        source_url: row.get(8)?,
+        target_path: row.get(9)?,
+        status: row.get(10)?,
+        bytes_downloaded: row.get(11)?,
+        total_bytes: row.get(12)?,
+        error_message: row.get(13)?,
+        created_at: row.get(14)?,
+        updated_at: row.get(15)?,
+    })
+}
+
+fn row_to_cache_entry(row: &Row<'_>) -> rusqlite::Result<CacheEntryRecord> {
+    Ok(CacheEntryRecord {
+        cache_key: row.get(0)?,
+        provider_id: row.get(1)?,
+        external_id: row.get(2)?,
+        title: row.get(3)?,
+        artist: row.get(4)?,
+        file_path: row.get(5)?,
+        size_bytes: row.get(6)?,
+        created_at: row.get(7)?,
+        last_accessed_at: row.get(8)?,
+        expires_at: row.get(9)?,
+    })
 }
 
 #[cfg(test)]

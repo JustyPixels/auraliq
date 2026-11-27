@@ -51,6 +51,7 @@ pub fn parse_freesound_tracks(raw_json: &str) -> Result<Vec<OnlineTrack>, AppErr
                 album: "Freesound CC Audio".to_string(),
                 duration_ms: (item.duration.unwrap_or(0.0) * 1000.0) as i64,
                 stream_url,
+                download_url: None,
                 artwork_url: None,
                 external_url: item.url,
                 license: item.license,

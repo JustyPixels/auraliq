@@ -3,24 +3,24 @@
 > **Read this file first before starting any new work session.**
 
 ## Current Status
-- **Current Milestone**: Milestone 8 — First Online Integrations (**COMPLETED**)
-- **Next Milestone**: Milestone 9 — Download Manager & Cache (`0.6.0`)
-- **Current Version**: `0.5.0`
+- **Current Milestone**: Milestone 9 — Download Manager & Cache (**COMPLETED**)
+- **Next Milestone**: Milestone 10 — Customization (`0.7.0`)
+- **Current Version**: `0.6.0`
 - **Repository Status**: `https://github.com/JustyPixels/auraliq` (`main`)
 
 ## What Is Completed
-- **Milestones 0–7**: Research, Tauri v2 + React 19 foundation, brand assets, retro design system, 5 themes, persistent customizable shell, SQLite + FTS5 local music engine, `lofty` metadata/artwork, `symphonia` + `cpal` playback, Windows SMTC (`souvlaki`), `realfft` Canvas visualizer, track identity matching, smart playlists, collections, `ProviderRegistry`, `keyring` credentials, SSRF URL validation.
-- **Milestone 8**:
-  - Live zero-config online music: `audius.rs` (trending + search + 320kbps streaming), `internet_archive.rs`, `radio_browser.rs`, and Direct Audio URL playback.
-  - Live BYOK providers (`keyring`): `jamendo.rs` (Client ID), `freesound.rs` (API Key), and `youtube.rs` (Data API v3 search + external watch handoff).
-  - `DiscoverPage` Online Stream Deck + `SearchPage` online & BYOK search tabs + `usePlayerStore.playOnlineTrackList`.
+- **Milestones 0–8**: Research, Tauri v2 + React 19 foundation, brand assets, retro design system, 5 themes, persistent customizable shell, SQLite + FTS5 local music engine, `lofty` metadata/artwork, `symphonia` + `cpal` playback, Windows SMTC (`souvlaki`), `realfft` Canvas visualizer, track identity matching, smart playlists, collections, `ProviderRegistry`, `keyring` credentials, SSRF URL validation, Audius, Internet Archive, Radio Browser, Direct URLs, and BYOK Jamendo/Freesound/YouTube.
+- **Milestone 9**:
+  - Source-aware Download Manager (`src-tauri/src/downloads/`) with SQLite v4 `downloads` & `download_settings`, HTTP `Range` resume, pause/resume/retry/cancel, concurrency 1–4, sanitized naming templates, `lofty` auto-tagging, and auto-library import.
+  - Temporary LRU Playback Cache (`src-tauri/src/cache/`) with `cache_entries` & `cache_settings`, max size/TTL eviction, background stream caching for `offline_cache_allowed` providers, and Offline Mode.
+  - `DownloadsPage`, `SearchPage` permitted download buttons, and `AppShell` Offline Mode badge.
 
 ## What Is Currently Working
-- Out-of-the-box online streaming (Audius Trending, Radio Browser, Internet Archive, Direct URLs) + BYOK catalogs + full offline local music engine.
+- Full offline local library + zero-key & BYOK online streaming + permitted downloads + LRU stream cache with Offline Mode.
 - All frontend (`prettier`, `eslint`, `tsc`, `vitest`, `vite build`) and Rust (`rustfmt`, `clippy`, `cargo test`) checks pass.
 
 ## What Is Currently Being Developed
-- Nothing actively in flight; ready to begin Milestone 9.
+- Nothing actively in flight; ready to begin Milestone 10.
 
 ## Outstanding Issues & Environment Notes
 1. **Windows Rust Toolchain**: Local `rustup override set stable-x86_64-pc-windows-msvc` is active; always prepend `$env:USERPROFILE\.cargo\bin` to `PATH` before running `cargo` / `rustc` / `pnpm tauri`.
@@ -34,10 +34,9 @@
 - See [TECHNICAL_DECISIONS.md](architecture/TECHNICAL_DECISIONS.md) (ADR-001 through ADR-012).
 
 ## Next Concrete Task
-Execute **Milestone 9 — Download Manager & Cache (`0.6.0`)**:
-1. Source-aware Download Manager (`src-tauri/src/downloads/`) gated strictly by `capabilities().download == true` (Internet Archive, Jamendo CC-permitted tracks), with queue, pause/resume/retry/cancel, atomic `.part` writes, `lofty` metadata tagging, and `downloads` SQLite history.
-2. Temporary LRU Playback Cache (`src-tauri/src/cache/`) gated by `capabilities().offline_cache_allowed == true`, with max size, TTL expiration, and one-click clear cache.
-3. Wire `DownloadsPage.tsx` and `Settings -> Storage & Cache` UI.
+Execute **Milestone 10 — Customization (`0.7.0`)**:
+1. Theme editor (colors, typography, density, visualizers, animations).
+2. Safe live CSS editor (`<style id="auraliq-user-css">`) + theme import/export + Safe Reset.
 
 ## Relevant Commands
 ```powershell

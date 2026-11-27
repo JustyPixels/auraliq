@@ -93,10 +93,10 @@
 
 ---
 
-## Milestone 9 — Download Manager & Cache (`0.6.0`)
+## Milestone 9 — Download Manager & Cache (`0.6.0`) [COMPLETED]
 
-- [ ] Implement source-aware download queue (pause, resume, retry, cancel, concurrency, naming rules, `lofty` tagging)
-- [ ] Implement LRU temporary playback cache (size limit, expiration, cleanup, offline mode handling)
+- [x] Implement source-aware download queue (pause, resume, retry, cancel, concurrency, naming rules, `lofty` tagging)
+- [x] Implement LRU temporary playback cache (size limit, expiration, cleanup, offline mode handling)
 
 ---
 

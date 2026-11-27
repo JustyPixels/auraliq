@@ -1,5 +1,12 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import type {
+  CacheEntryRecord,
+  CacheSettings,
+  CacheStats,
+  DownloadRecord,
+  DownloadSettings,
+} from "../types/downloads";
 import type { OnlineTrack, ProviderInfo, ProviderSearchResult } from "../types/providers";
 import type {
   AlbumSummary,
@@ -45,6 +52,29 @@ export function formatDurationMs(ms: number): string {
 export async function pickMusicFolder(): Promise<string | null> {
   const selected = await open({ directory: true, multiple: false, title: "Select Music Folder" });
   return typeof selected === "string" ? selected : null;
+}
+
+export async function pickDownloadFolder(): Promise<string | null> {
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    title: "Select Download Folder",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
 }
 
 export async function pickPlaylistFile(): Promise<string | null> {
@@ -167,4 +197,25 @@ export const backendApi = {
     }),
   resolveAndPlayOnlineTrack: (track: OnlineTrack) =>
     invoke<string>("resolve_and_play_online_track", { track }),
+
+  listDownloads: () => invoke<DownloadRecord[]>("list_downloads"),
+  enqueueDownload: (track: OnlineTrack) => invoke<DownloadRecord>("enqueue_download", { track }),
+  pauseDownload: (id: number) => invoke<void>("pause_download", { id }),
+  resumeDownload: (id: number) => invoke<void>("resume_download", { id }),
+  retryDownload: (id: number) => invoke<void>("retry_download", { id }),
+  cancelDownload: (id: number) => invoke<void>("cancel_download", { id }),
+  removeDownload: (id: number, deleteFile = false) =>
+    invoke<void>("remove_download", { id, deleteFile }),
+  clearCompletedDownloads: () => invoke<number>("clear_completed_downloads"),
+  getDownloadSettings: () => invoke<DownloadSettings>("get_download_settings"),
+  updateDownloadSettings: (settings: DownloadSettings) =>
+    invoke<DownloadSettings>("update_download_settings", { settings }),
+
+  getCacheStats: () => invoke<CacheStats>("get_cache_stats"),
+  listCacheEntries: () => invoke<CacheEntryRecord[]>("list_cache_entries"),
+  updateCacheSettings: (settings: CacheSettings) =>
+    invoke<CacheSettings>("update_cache_settings", { settings }),
+  clearPlaybackCache: () => invoke<number>("clear_playback_cache"),
+  removeCacheEntry: (cacheKey: string) => invoke<void>("remove_cache_entry", { cacheKey }),
+  runCacheCleanup: () => invoke<number>("run_cache_cleanup"),
 };

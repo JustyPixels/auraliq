@@ -46,6 +46,8 @@ pub struct OnlineTrack {
     pub album: String,
     pub duration_ms: i64,
     pub stream_url: Option<String>,
+    #[serde(default)]
+    pub download_url: Option<String>,
     pub artwork_url: Option<String>,
     pub external_url: Option<String>,
     pub license: Option<String>,

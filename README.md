@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.5.0 — Milestone 8](https://img.shields.io/badge/Status-v0.5.0%20Milestone%208-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.6.0 — Milestone 9](https://img.shields.io/badge/Status-v0.6.0%20Milestone%209-4c1d95.svg)](ROADMAP.md)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
 
@@ -24,8 +24,10 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.5.0 — Milestone 8 First Online Integrations)
+### Available (v0.6.0 — Milestone 9 Download Manager & Cache)
 
+- **Source-Aware Download Manager**: Permitted downloads for open/CC sources (Internet Archive, artist-approved Jamendo tracks) with pause/resume (`Range`), retry/cancel, concurrency control, naming templates, `lofty` auto-tagging, and auto-import to the local library
+- **LRU Temporary Playback Cache**: Strictly separated stream cache (`offline_cache_allowed` sources only) with configurable size limit, TTL expiration, automatic cleanup, and **Offline Mode**
 - **Zero-Config Online Music**: **Audius** (trending & search, free 320kbps streaming), **Internet Archive** (open archival audio), **Radio Browser** (global live radio), and **Direct Audio URLs**
 - **Bring-Your-Own-Key (BYOK) Providers**: **Jamendo** (CC catalog), **Freesound** (CC ambient/synth stems), and **YouTube** (Data API v3 search + external watch handoff) stored in Windows Credential Manager
 - Dedicated-thread Rust audio engine (`symphonia` + `cpal` + stereo resampler) supporting local files and validated HTTP audio streams
@@ -36,7 +38,7 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ### In Development
 
-- Source-aware Download Manager & LRU Temporary Playback Cache (Milestone 9)
+- Theme Editor & Safe Live CSS Customization (Milestone 10)
 
 ### Planned
 

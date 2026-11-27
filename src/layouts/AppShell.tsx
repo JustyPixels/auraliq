@@ -13,6 +13,7 @@ import { LibraryShellPage, type LibraryTabId } from "../pages/LibraryShellPage";
 import { PlaylistsPage } from "../pages/PlaylistsPage";
 import { SearchPage } from "../pages/SearchPage";
 import { SettingsPage } from "../pages/SettingsPage";
+import { useDownloadsStore } from "../stores/useDownloadsStore";
 import { useLayoutStore } from "../stores/useLayoutStore";
 import { useThemeStore } from "../stores/useThemeStore";
 import { getThemeById } from "../themes/applyTheme";
@@ -51,6 +52,7 @@ export function AppShell() {
   } = useLayoutStore();
 
   const { info, status, error } = useAppInfo();
+  const offlineMode = useDownloadsStore((state) => state.cacheStats?.offline_mode ?? false);
   const themeId = useThemeStore((state) => state.themeId);
   const currentTheme = getThemeById(themeId);
   const currentNav = NAV_ITEMS.find((item) => item.id === activeSection) ?? NAV_ITEMS[0];
@@ -107,6 +109,7 @@ export function AppShell() {
                 <HelpCircle size={16} />
               </Button>
               <Badge tone="neutral">{currentTheme.name}</Badge>
+              {offlineMode && <Badge tone="warn">Offline Mode</Badge>}
               {ipcBadge}
             </div>
           </header>

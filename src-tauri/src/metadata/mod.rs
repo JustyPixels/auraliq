@@ -4,10 +4,11 @@ use std::fs;
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 
+use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::picture::{MimeType, PictureType};
 use lofty::probe::read_from_path;
-use lofty::tag::Accessor;
+use lofty::tag::{Accessor, Tag, TagExt};
 use sha2::{Digest, Sha256};
 
 use crate::database::models::NewTrackData;
@@ -167,4 +168,29 @@ pub fn extract_metadata(path: &Path, artwork_dir: &Path) -> Result<NewTrackData,
         file_size,
         modified_at,
     })
+}
+
+pub fn write_track_tags(
+    path: &Path,
+    title: &str,
+    artist: &str,
+    album: &str,
+    license: Option<&str>,
+) -> Result<(), AppError> {
+    let mut tagged_file = read_from_path(path).map_err(|e| AppError::Metadata(e.to_string()))?;
+    let tag_type = tagged_file.primary_tag_type();
+    if tagged_file.primary_tag().is_none() {
+        tagged_file.insert_tag(Tag::new(tag_type));
+    }
+    if let Some(tag) = tagged_file.primary_tag_mut() {
+        tag.set_title(title.to_string());
+        tag.set_artist(artist.to_string());
+        tag.set_album(album.to_string());
+        if let Some(lic) = license.filter(|l| !l.trim().is_empty()) {
+            tag.set_comment(format!("License: {lic}"));
+        }
+        tag.save_to_path(path, WriteOptions::default())
+            .map_err(|e| AppError::Metadata(e.to_string()))?;
+    }
+    Ok(())
 }

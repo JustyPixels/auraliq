@@ -62,6 +62,7 @@ pub fn parse_audius_tracks(raw_json: &str) -> Result<Vec<OnlineTrack>, AppError>
                 album: item.genre.unwrap_or_else(|| "Audius".to_string()),
                 duration_ms: item.duration.unwrap_or(0) * 1000,
                 stream_url,
+                download_url: None,
                 artwork_url,
                 external_url,
                 license: None,

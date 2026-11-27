@@ -24,6 +24,7 @@ struct JamendoTrack {
     album_name: Option<String>,
     album_image: Option<String>,
     audio: Option<String>,
+    audiodownload: Option<String>,
     audiodownload_allowed: Option<bool>,
     license_ccurl: Option<String>,
     shareurl: Option<String>,
@@ -36,20 +37,29 @@ pub fn parse_jamendo_tracks(raw_json: &str) -> Result<Vec<OnlineTrack>, AppError
     let tracks = parsed
         .results
         .into_iter()
-        .map(|item| OnlineTrack {
-            provider_id: "jamendo".to_string(),
-            external_id: item.id,
-            title: item.name,
-            artist: item
-                .artist_name
-                .unwrap_or_else(|| "Jamendo Artist".to_string()),
-            album: item.album_name.unwrap_or_else(|| "Jamendo".to_string()),
-            duration_ms: item.duration.unwrap_or(0) * 1000,
-            stream_url: item.audio.filter(|u| !u.trim().is_empty()),
-            artwork_url: item.album_image.filter(|u| !u.trim().is_empty()),
-            external_url: item.shareurl,
-            license: item.license_ccurl,
-            downloadable: item.audiodownload_allowed.unwrap_or(false),
+        .map(|item| {
+            let downloadable = item.audiodownload_allowed.unwrap_or(false);
+            let download_url = if downloadable {
+                item.audiodownload.filter(|u| !u.trim().is_empty())
+            } else {
+                None
+            };
+            OnlineTrack {
+                provider_id: "jamendo".to_string(),
+                external_id: item.id,
+                title: item.name,
+                artist: item
+                    .artist_name
+                    .unwrap_or_else(|| "Jamendo Artist".to_string()),
+                album: item.album_name.unwrap_or_else(|| "Jamendo".to_string()),
+                duration_ms: item.duration.unwrap_or(0) * 1000,
+                stream_url: item.audio.filter(|u| !u.trim().is_empty()),
+                download_url,
+                artwork_url: item.album_image.filter(|u| !u.trim().is_empty()),
+                external_url: item.shareurl,
+                license: item.license_ccurl,
+                downloadable,
+            }
         })
         .collect();
 

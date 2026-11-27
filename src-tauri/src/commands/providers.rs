@@ -129,6 +129,32 @@ pub async fn resolve_and_play_online_track(
         )));
     }
 
+    let cache_allowed = provider.capabilities().offline_cache_allowed;
+    if cache_allowed {
+        if let Some(cached_path) = state
+            .cache
+            .lookup_valid(&track.provider_id, &track.external_id)?
+        {
+            let path_str = cached_path.to_string_lossy().into_owned();
+            state.audio.load_and_play(path_str.clone(), 0)?;
+            state.media_session.update_metadata(
+                &track.title,
+                &track.artist,
+                &track.album,
+                track.duration_ms.max(0) as u64,
+            );
+            state.media_session.update_playback("playing", 0);
+            return Ok(path_str);
+        }
+    }
+
+    let cache_settings = state.cache.get_settings()?;
+    if cache_settings.offline_mode {
+        return Err(AppError::Provider(
+            "Offline mode is enabled and this track is not cached locally.".to_string(),
+        ));
+    }
+
     let resolved = if track.provider_id == "radio_browser" || track.stream_url.is_none() {
         state
             .providers
@@ -151,5 +177,16 @@ pub async fn resolve_and_play_online_track(
         track.duration_ms.max(0) as u64,
     );
     state.media_session.update_playback("playing", 0);
+
+    if cache_allowed && cache_settings.enabled {
+        state.cache.spawn_background_cache_url(
+            track.provider_id,
+            track.external_id,
+            track.title,
+            track.artist,
+            final_url.clone(),
+        );
+    }
+
     Ok(final_url)
 }

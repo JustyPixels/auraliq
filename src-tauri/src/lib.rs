@@ -1,6 +1,8 @@
 pub mod audio;
+pub mod cache;
 pub mod commands;
 pub mod database;
+pub mod downloads;
 pub mod error;
 pub mod library;
 pub mod metadata;
@@ -9,20 +11,24 @@ pub mod providers;
 pub mod security;
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use tauri::Manager;
 
 use audio::AudioEngine;
+use cache::CacheManager;
 use database::Database;
+use downloads::DownloadManager;
 use platform::media_keys::MediaSession;
 use providers::ProviderRegistry;
 
 pub struct AppState {
-    pub db: Mutex<Database>,
+    pub db: Arc<Mutex<Database>>,
     pub audio: AudioEngine,
     pub media_session: MediaSession,
-    pub providers: ProviderRegistry,
+    pub providers: Arc<ProviderRegistry>,
+    pub downloads: DownloadManager,
+    pub cache: CacheManager,
     pub artwork_dir: PathBuf,
 }
 
@@ -36,17 +42,33 @@ pub fn run() {
                 .app_local_data_dir()
                 .map_err(|e| std::io::Error::other(e.to_string()))?;
             let artwork_dir = data_dir.join("artwork");
+            let downloads_dir = data_dir.join("downloads");
+            let cache_dir = data_dir.join("playback_cache");
             std::fs::create_dir_all(&artwork_dir)?;
             let db_path = data_dir.join("auraliq.db");
-            let db = Database::open(&db_path).map_err(|e| std::io::Error::other(e.to_string()))?;
+            let db = Arc::new(Mutex::new(
+                Database::open(&db_path).map_err(|e| std::io::Error::other(e.to_string()))?,
+            ));
+            let providers = Arc::new(ProviderRegistry::new());
+            let downloads = DownloadManager::new(
+                Arc::clone(&db),
+                Arc::clone(&providers),
+                downloads_dir,
+                artwork_dir.clone(),
+            )
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
+            let cache = CacheManager::new(Arc::clone(&db), cache_dir)
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
 
             let media_session = MediaSession::init(app.handle());
 
             app.manage(AppState {
-                db: Mutex::new(db),
+                db,
                 audio: AudioEngine::new(),
                 media_session,
-                providers: ProviderRegistry::new(),
+                providers,
+                downloads,
+                cache,
                 artwork_dir,
             });
             Ok(())
@@ -107,6 +129,22 @@ pub fn run() {
             commands::providers::search_provider,
             commands::providers::play_online_track,
             commands::providers::resolve_and_play_online_track,
+            commands::downloads::list_downloads,
+            commands::downloads::enqueue_download,
+            commands::downloads::pause_download,
+            commands::downloads::resume_download,
+            commands::downloads::retry_download,
+            commands::downloads::cancel_download,
+            commands::downloads::remove_download,
+            commands::downloads::clear_completed_downloads,
+            commands::downloads::get_download_settings,
+            commands::downloads::update_download_settings,
+            commands::cache::get_cache_stats,
+            commands::cache::list_cache_entries,
+            commands::cache::update_cache_settings,
+            commands::cache::clear_playback_cache,
+            commands::cache::remove_cache_entry,
+            commands::cache::run_cache_cleanup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Auraliq");
