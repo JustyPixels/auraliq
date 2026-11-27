@@ -58,9 +58,9 @@
         <div class="aq-panel__header">
           <div class="aq-panel__title-wrap">
             <span class="aq-led" aria-hidden="true"></span>
-            <span>Signal Deck // v0.8.1</span>
+            <span>Signal Deck // v1.0.0 MVP</span>
           </div>
-          <span class="aq-badge aq-badge--accent">Rust + Tauri v2</span>
+          <span class="aq-badge aq-badge--ok">v1.0.0 Released</span>
         </div>
         <div class="aq-panel__body aq-hero">
           <div>
@@ -74,17 +74,17 @@
               <span class="aq-badge aq-badge--ok">MIT License</span>
               <span class="aq-badge">Windows 10/11 x64</span>
               <span class="aq-badge aq-badge--accent">Zero Telemetry</span>
-              <span class="aq-badge">Local-First SQLite FTS5</span>
+              <span class="aq-badge">0-Vuln Audit</span>
             </div>
             <div class="aq-row-wrap">
-              <a class="aq-btn aq-btn--primary" href="#downloads">Get Auraliq (v0.8.1)</a>
+              <a class="aq-btn aq-btn--primary" href="#downloads">Download v1.0.0 for Windows</a>
               <a
                 class="aq-btn"
-                href="https://github.com/JustyPixels/auraliq"
+                href="https://github.com/JustyPixels/auraliq/releases/tag/v1.0.0"
                 target="_blank"
                 rel="noreferrer"
               >
-                Source Repository
+                Release Notes
               </a>
             </div>
           </div>
@@ -165,40 +165,48 @@
         <div class="aq-panel__header">
           <div class="aq-panel__title-wrap">
             <span class="aq-led" aria-hidden="true"></span>
-            <span id="downloads-heading">Downloads &amp; Building From Source</span>
+            <span id="downloads-heading">Downloads — Auraliq v1.0.0 MVP</span>
           </div>
-          <span class="aq-badge aq-badge--warn">v0.8.1 Pre-MVP</span>
+          <span class="aq-badge aq-badge--ok">Windows 10/11 x64</span>
         </div>
         <div class="aq-panel__body aq-grid-2">
           <div class="aq-well">
-            <h3>Windows 10 / 11 (x64) Releases</h3>
+            <h3>Windows x64 Installer &amp; Portable</h3>
             <p>
-              Auraliq is currently at <strong>v0.8.1</strong> (Milestone 12). Signed/checksummed
-              Windows NSIS installer (<code>.exe</code>) and Portable ZIP bundles arrive in
-              <strong>Milestone 14 (v1.0.0 MVP)</strong>. Check GitHub Releases for tagged builds.
+              Install Auraliq for your Windows user account with the NSIS installer, or run the
+              standalone Portable ZIP anywhere with zero installation.
             </p>
             <div class="aq-row-wrap" style="margin-top: 0.9rem">
               <a
                 class="aq-btn aq-btn--primary"
-                href="https://github.com/JustyPixels/auraliq/releases"
+                href="https://github.com/JustyPixels/auraliq/releases/download/v1.0.0/Auraliq_1.0.0_x64-setup.exe"
                 target="_blank"
                 rel="noreferrer"
               >
-                View GitHub Releases
+                Installer (.exe)
               </a>
               <a
                 class="aq-btn"
-                href="https://github.com/JustyPixels/auraliq/blob/main/docs/development/BUILDING.md"
+                href="https://github.com/JustyPixels/auraliq/releases/download/v1.0.0/Auraliq_1.0.0_x64-portable.zip"
                 target="_blank"
                 rel="noreferrer"
               >
-                Build Guide
+                Portable (.zip)
+              </a>
+              <a
+                class="aq-btn"
+                href="https://github.com/JustyPixels/auraliq/releases/download/v1.0.0/SHA256SUMS.txt"
+                target="_blank"
+                rel="noreferrer"
+              >
+                SHA256SUMS.txt
               </a>
             </div>
+            <pre class="aq-code">Get-FileHash .\Auraliq_1.0.0_x64-setup.exe -Algorithm SHA256</pre>
           </div>
 
           <div class="aq-well">
-            <h3>Run From Source (Windows MSVC)</h3>
+            <h3>Build From Source (Windows MSVC)</h3>
             <p>Requires Node.js 22+, pnpm 10+, Rust stable MSVC, and WebView2 Runtime.</p>
             <pre class="aq-code">
 git clone https://github.com/JustyPixels/auraliq.git
@@ -308,7 +316,7 @@ pnpm tauri dev</pre>
             <span class="aq-led" aria-hidden="true"></span>
             <span id="roadmap-heading">Project Roadmap (0.1.0 &rarr; 1.0.0)</span>
           </div>
-          <span class="aq-badge aq-badge--ok">M0–M12 Complete</span>
+          <span class="aq-badge aq-badge--ok">M0–M14 Complete (v1.0.0)</span>
         </div>
         <div class="aq-panel__body aq-grid-3">
           <div class="aq-well">
@@ -340,17 +348,17 @@ pnpm tauri dev</pre>
             </p>
           </div>
           <div class="aq-well">
-            <h3>M12: Website &amp; Docs (Done)</h3>
+            <h3>M12–M13: Site, QA &amp; Security</h3>
             <p>
-              Static 1990s retro project website, automated GitHub Pages deployment, real app
-              screenshots, refreshed documentation.
+              Retro GitHub Pages site, 0-vulnerability <code>cargo audit</code> &amp;
+              <code>pnpm audit</code>, SSRF/filename hardening, idle &amp; batch scan optimization.
             </p>
           </div>
           <div class="aq-well">
-            <h3>M13–M14: QA &amp; v1.0.0 MVP</h3>
+            <h3>M14: v1.0.0 MVP Released</h3>
             <p>
-              Upcoming: performance profiling, security audit, Windows NSIS &amp; Portable ZIP
-              release pipeline with SHA-256 checksums.
+              Automated Windows NSIS Installer, Portable ZIP, SHA-256 checksums, release notes, and
+              live documentation.
             </p>
           </div>
         </div>

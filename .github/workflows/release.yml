@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend and Rust tests
+        run: |
+          pnpm test
+          pnpm build
+          cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Build Windows NSIS installer
+        run: pnpm tauri build --bundles nsis
+
+      - name: Package Portable ZIP and SHA-256 checksums
+        shell: pwsh
+        run: |
+          $pkg = Get-Content -Raw package.json | ConvertFrom-Json
+          $version = $pkg.version
+
+          New-Item -ItemType Directory -Force -Path release-artifacts | Out-Null
+          $nsisExe = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $nsisExe) {
+            throw "NSIS setup executable not found in src-tauri/target/release/bundle/nsis"
+          }
+          $installerName = "Auraliq_${version}_x64-setup.exe"
+          Copy-Item $nsisExe.FullName "release-artifacts/$installerName" -Force
+
+          $portableDir = "release-staging/Auraliq_${version}_x64-portable"
+          New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
+          Copy-Item "src-tauri/target/release/auraliq.exe" "$portableDir/auraliq.exe" -Force
+          Copy-Item "README.md" "$portableDir/README.md" -Force
+          Copy-Item "LICENSE" "$portableDir/LICENSE" -Force
+          Copy-Item "CHANGELOG.md" "$portableDir/CHANGELOG.md" -Force
+
+          $portableZip = "Auraliq_${version}_x64-portable.zip"
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "release-artifacts/$portableZip" -Force
+
+          $h1 = (Get-FileHash "release-artifacts/$installerName" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $h2 = (Get-FileHash "release-artifacts/$portableZip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          @(
+            "$h1  $installerName"
+            "$h2  $portableZip"
+          ) | Set-Content -Encoding Ascii "release-artifacts/SHA256SUMS.txt"
+
+          Get-ChildItem release-artifacts | Select-Object Name, Length
+          Get-Content release-artifacts/SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = if ("${{ github.ref_name }}".StartsWith("v")) { "${{ github.ref_name }}" } else {
+            $pkg = Get-Content -Raw package.json | ConvertFrom-Json
+            "v$($pkg.version)"
+          }
+          $notesFile = "docs/releases/$tag.md"
+          $exists = gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag release-artifacts/* --clobber
+          } elseif (Test-Path $notesFile) {
+            gh release create $tag release-artifacts/* --title "Auraliq $tag" --notes-file $notesFile
+          } else {
+            gh release create $tag release-artifacts/* --title "Auraliq $tag" --generate-notes
+          }

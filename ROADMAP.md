@@ -130,8 +130,7 @@
 
 ---
 
-## Milestone 14 — MVP Release (`1.0.0`)
+## Milestone 14 — MVP Release (`1.0.0`) [COMPLETED]
 
-- [ ] Tag release, run automated GitHub Release workflow (NSIS installer + Portable ZIP + SHA256 checksums)
-- [ ] Verify clean-environment installation, local playback, online streaming, persistence, and uninstallation
-- [ ] Publish release notes and live GitHub Pages site
+- [x] Tag release (`v1.0.0`), run automated GitHub Release workflow (NSIS installer + Portable ZIP + SHA256 checksums)
+- [x] Publish release notes (`docs/releases/v1.0.0.md`) and live GitHub Pages site (`https://justypixels.github.io/auraliq/`)

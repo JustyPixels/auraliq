@@ -5,6 +5,14 @@ All notable changes to **Auraliq** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-11-27
+
+### Added
+
+- **Milestone 14 (MVP Release)**:
+  - Automated GitHub Release workflow (`.github/workflows/release.yml`) producing `Auraliq_1.0.0_x64-setup.exe` (NSIS current-user installer), `Auraliq_1.0.0_x64-portable.zip`, and `SHA256SUMS.txt`.
+  - Release notes (`docs/releases/v1.0.0.md`) and live `v1.0.0` download links on `website/index.html` and `README.md`.
+
 ## [0.9.0] - 2026-11-27
 
 ### Security

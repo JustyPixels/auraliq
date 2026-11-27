@@ -2,9 +2,10 @@
 
 ## Supported Versions
 
-| Version | Supported                |
-| ------- | ------------------------ |
-| `0.9.x` | Yes (active development) |
+| Version | Supported            |
+| ------- | -------------------- |
+| `1.0.x` | Yes (MVP Release)    |
+| `0.9.x` | Security maintenance |
 
 ## Security Audit
 

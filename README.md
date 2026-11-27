@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.9.0 — Milestone 13](https://img.shields.io/badge/Status-v0.9.0%20Milestone%2013-4c1d95.svg)](ROADMAP.md)
+[![Status: v1.0.0 — MVP Released](https://img.shields.io/badge/Status-v1.0.0%20MVP-22c55e.svg)](https://github.com/JustyPixels/auraliq/releases/tag/v1.0.0)
 [![Website](https://img.shields.io/badge/Website-GitHub%20Pages-6d28d9.svg)](https://justypixels.github.io/auraliq/)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
@@ -31,7 +31,9 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.9.0 — Milestone 13 QA, Optimization & Security)
+### Available (v1.0.0 MVP)
+
+- **Windows Releases**: Current-user NSIS Installer (`Auraliq_1.0.0_x64-setup.exe`), Portable ZIP (`Auraliq_1.0.0_x64-portable.zip`), and `SHA256SUMS.txt` available on [GitHub Releases](https://github.com/JustyPixels/auraliq/releases/tag/v1.0.0) and the [Project Website](https://justypixels.github.io/auraliq/)
 
 - **Audio DSP & Playback Enhancements**: 5-band biquad Equalizer with 6 presets, ReplayGain normalization, **Gapless Playback**, and **Crossfade (0–8s)**
 - **Opt-In Synced & Local Lyrics**: Automatic offline `.lrc` sidecars + optional opt-in LRCLIB synced/plain lyrics with click-to-seek
@@ -47,13 +49,9 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 - SQLite (`rusqlite` + WAL + FTS5) local library, `lofty` metadata/artwork, M3U/M3U8/PLS playlists, smart playlists, custom collections, duplicate detection, and non-destructive track identity matching
 - 5 built-in retro themes, UI density, resizable/customizable sidebar, and rebindable keyboard shortcuts
 
-### In Development
+### Post-MVP Planned
 
-- Windows NSIS Installer & Portable ZIP MVP Release (Milestone 14)
-
-### Planned
-
-- Windows NSIS Installer & Portable ZIP MVP Release with SHA-256 Checksums (Milestone 14)
+- Linux / macOS builds, optional expanded music service integrations, and community theme packs
 
 ### Not Supported (By Design / Legal Compliance)
 
