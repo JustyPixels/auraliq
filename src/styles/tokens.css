@@ -1,29 +1,36 @@
 :root {
-  --aq-bg: #0d0b14;
-  --aq-bg-gradient: radial-gradient(circle at 18% 12%, rgba(139, 92, 246, 0.14), transparent 46%);
-  --aq-surface: #161224;
-  --aq-surface-elevated: #201a33;
-  --aq-surface-inset: #0a0810;
-  --aq-text: #f3effa;
-  --aq-muted: #a49ac0;
-  --aq-accent: #8b5cf6;
-  --aq-accent-hover: #9d74f7;
+  --aq-bg: #0b0714;
+  --aq-bg-gradient: linear-gradient(
+    180deg,
+    rgba(168, 85, 247, 0.08) 0%,
+    rgba(11, 7, 20, 0.96) 100%
+  );
+  --aq-surface: #1a112c;
+  --aq-surface-elevated: #271a42;
+  --aq-surface-inset: #080410;
+  --aq-text: #f3ecff;
+  --aq-muted: #ab9ac9;
+  --aq-accent: #a855f7;
+  --aq-accent-hover: #c084fc;
   --aq-accent-contrast: #ffffff;
-  --aq-accent-soft: rgba(139, 92, 246, 0.18);
-  --aq-secondary-accent: #38bdf8;
-  --aq-border: #2e2646;
-  --aq-border-highlight: #433866;
+  --aq-accent-soft: rgba(168, 85, 247, 0.22);
+  --aq-secondary-accent: #22d3ee;
+  --aq-border: #3e2b66;
+  --aq-border-highlight: #6b4ca8;
+  --aq-bevel-light: #6f4eb0;
+  --aq-bevel-dark: #06030d;
+  --aq-titlebar-bg: linear-gradient(90deg, #3b1d7a 0%, #6d28d9 52%, #1f103d 100%);
   --aq-ok: #34d399;
   --aq-warn: #fbbf24;
   --aq-danger: #f87171;
 
-  --aq-font-sans: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --aq-font-mono: "Cascadia Mono", Consolas, ui-monospace, SFMono-Regular, monospace;
-  --aq-font-display: var(--aq-font-sans);
+  --aq-font-sans: Tahoma, Verdana, "Segoe UI", system-ui, sans-serif;
+  --aq-font-mono: "Cascadia Mono", Consolas, "Lucida Console", ui-monospace, monospace;
+  --aq-font-display: var(--aq-font-mono);
 
-  --aq-radius-sm: 4px;
-  --aq-radius-md: 8px;
-  --aq-radius-lg: 12px;
+  --aq-radius-sm: 0px;
+  --aq-radius-md: 0px;
+  --aq-radius-lg: 0px;
 
   --aq-space-1: 0.25rem;
   --aq-space-2: 0.5rem;
@@ -37,7 +44,7 @@
   --aq-right-panel-width: 288px;
   --aq-player-height: 82px;
 
-  --aq-scanlines-opacity: 0;
-  --aq-glow: 0 0 18px rgba(139, 92, 246, 0.25);
-  --aq-transition-fast: 120ms ease;
+  --aq-scanlines-opacity: 0.05;
+  --aq-glow: 0 0 12px rgba(168, 85, 247, 0.3);
+  --aq-transition-fast: 90ms linear;
 }

@@ -5,6 +5,21 @@ All notable changes to **Auraliq** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-11-27
+
+### Changed
+
+- **1990s Retro Purplish UI Overhaul**:
+  - Removed rounded borders (`border-radius: 0px`) across all presets, panels, buttons, badges, inputs, modals, and track rows.
+  - Added authentic 1990s raised/sunken 3D hardware bevels, gradient panel titlebars (`--aq-titlebar-bg`), square LEDs, chunky fader sliders, and purple CRT scanlines while preserving Auraliq's signature purple palette.
+
+### Added
+
+- **Milestone 10 (Customization)**:
+  - Live **Theme Editor** (`src/components/ThemeEditor.tsx`) with 10-color palette overrides, 4 typography presets (`Classic 90s`, `Monospace CRT`, `System Clean`, `Retro Terminal`), Bevel Style (`90s 3D Bevel` / `Flat Pixel`), CRT Scanline intensity slider, UI density, visualizer style, and reduced motion controls.
+  - **Safe Live CSS Editor** (`src/components/CustomCssEditor.tsx`, `src/themes/userCss.ts`) injecting sanitized local-only CSS into `<style id="auraliq-user-css">` (blocking `@import`, external `url()`, `expression()`, `javascript:`, and `</style>`), with an instant kill-switch and starter snippets.
+  - JSON **Theme Import / Export** (`src/themes/serialization.ts`) and one-click **Safe Reset All**.
+
 ## [0.6.0] - 2026-11-27
 
 ### Added

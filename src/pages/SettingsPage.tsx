@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { isTauriRuntime } from "../api/backend";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
+import { CustomCssEditor } from "../components/CustomCssEditor";
 import { Panel } from "../components/Panel";
 import { Slider } from "../components/Slider";
+import { ThemeEditor } from "../components/ThemeEditor";
 import { ThemePicker } from "../components/ThemePicker";
 import type { RuntimeStatus } from "../hooks/useAppInfo";
 import { NAV_ITEMS, type NavSectionId } from "../layouts/nav";
@@ -16,6 +18,7 @@ import {
 } from "../stores/useLayoutStore";
 import { usePlayerStore } from "../stores/usePlayerStore";
 import { useProvidersStore } from "../stores/useProvidersStore";
+import { useThemeStore } from "../stores/useThemeStore";
 import {
   formatKeyEvent,
   SHORTCUT_DEFINITIONS,
@@ -45,15 +48,14 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
     navOrder,
     hiddenSections,
     pinnedSections,
-    uiDensity,
     setDefaultLandingPage,
     setSidebarWidth,
     togglePinSection,
     toggleHideSection,
     moveNavSection,
-    setUiDensity,
     resetLayout,
   } = useLayoutStore();
+  const safeResetCustomization = useThemeStore((state) => state.safeResetCustomization);
 
   const { bindings, setBinding, resetShortcuts } = useShortcutsStore();
   const {
@@ -131,29 +133,25 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
 
       {activeTab === "appearance" && (
         <>
-          <Panel title="Appearance & Themes" ledActive>
+          <Panel
+            title="Appearance & Themes"
+            ledActive
+            headerActions={
+              <Button size="sm" variant="secondary" onClick={safeResetCustomization}>
+                <RotateCcw size={14} />
+                Safe Reset
+              </Button>
+            }
+          >
             <ThemePicker />
           </Panel>
 
-          <Panel title="UI Density">
-            <div className="aq-row-wrap">
-              <Button
-                size="sm"
-                variant="secondary"
-                active={uiDensity === "comfortable"}
-                onClick={() => setUiDensity("comfortable")}
-              >
-                Comfortable
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                active={uiDensity === "compact"}
-                onClick={() => setUiDensity("compact")}
-              >
-                Compact
-              </Button>
-            </div>
+          <Panel title="Theme Editor" ledActive>
+            <ThemeEditor />
+          </Panel>
+
+          <Panel title="Safe Live CSS Editor">
+            <CustomCssEditor />
           </Panel>
         </>
       )}

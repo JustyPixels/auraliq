@@ -27,22 +27,28 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--aq-accent);
+  outline: 1px dotted var(--aq-secondary-accent);
   outline-offset: 2px;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
   background: var(--aq-surface-inset);
+  border-left: 1px solid var(--aq-bevel-dark);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--aq-border-highlight);
-  border-radius: var(--aq-radius-sm);
+  background: var(--aq-surface-elevated);
+  border: 2px solid var(--aq-border);
+  border-top-color: var(--aq-bevel-light);
+  border-left-color: var(--aq-bevel-light);
+  border-right-color: var(--aq-bevel-dark);
+  border-bottom-color: var(--aq-bevel-dark);
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {

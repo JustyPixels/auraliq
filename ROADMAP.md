@@ -100,10 +100,10 @@
 
 ---
 
-## Milestone 10 — Customization (`0.7.0`)
+## Milestone 10 — Customization (`0.7.0`) [COMPLETED]
 
-- [ ] Build theme editor (colors, typography, density, visualizers, animations)
-- [ ] Build safe live CSS editor (`<style id="auraliq-user-css">`) + theme import/export + Safe Reset
+- [x] Build theme editor (colors, typography, density, visualizers, animations, 90s purple hardware bevels)
+- [x] Build safe live CSS editor (`<style id="auraliq-user-css">`) + theme import/export + Safe Reset
 
 ---
 

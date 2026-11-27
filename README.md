@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.6.0 — Milestone 9](https://img.shields.io/badge/Status-v0.6.0%20Milestone%209-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.7.0 — Milestone 10](https://img.shields.io/badge/Status-v0.7.0%20Milestone%2010-4c1d95.svg)](ROADMAP.md)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
 
@@ -24,8 +24,10 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.6.0 — Milestone 9 Download Manager & Cache)
+### Available (v0.7.0 — Milestone 10 Customization & 90s Deck UI)
 
+- **1990s Retro Purplish Deck UI**: Zero-radius beveled panels, 3D hardware buttons, gradient titlebars, square LEDs, and subtle CRT scanlines
+- **Theme Editor & Safe Live CSS**: Live 10-color palette overrides, typography presets, bevel style (`90s 3D Bevel` / `Flat Pixel`), scanline slider, sanitized `<style id="auraliq-user-css">` live CSS editor, JSON theme import/export, and Safe Reset
 - **Source-Aware Download Manager**: Permitted downloads for open/CC sources (Internet Archive, artist-approved Jamendo tracks) with pause/resume (`Range`), retry/cancel, concurrency control, naming templates, `lofty` auto-tagging, and auto-import to the local library
 - **LRU Temporary Playback Cache**: Strictly separated stream cache (`offline_cache_allowed` sources only) with configurable size limit, TTL expiration, automatic cleanup, and **Offline Mode**
 - **Zero-Config Online Music**: **Audius** (trending & search, free 320kbps streaming), **Internet Archive** (open archival audio), **Radio Browser** (global live radio), and **Direct Audio URLs**
@@ -38,7 +40,7 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ### In Development
 
-- Theme Editor & Safe Live CSS Customization (Milestone 10)
+- Optional LRCLIB Lyrics, Equalizer & Audio Enhancements (Milestone 11)
 
 ### Planned
 
