@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.1.0 — Milestone 2](https://img.shields.io/badge/Status-v0.1.0%20Milestone%202-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.1.0 — Milestone 3](https://img.shields.io/badge/Status-v0.1.0%20Milestone%203-4c1d95.svg)](ROADMAP.md)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
 
@@ -24,18 +24,19 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.1.0 — Milestone 2 Design System & Shell)
+### Available (v0.1.0 — Milestone 3 Core Application Shell)
 
 - Tauri v2 + Rust (`x86_64-pc-windows-msvc`) + React 19 + TypeScript desktop shell
 - Typed Tauri IPC bridge (`get_app_info`) with graceful browser preview fallback
 - Brand identity assets (`branding/`), custom app icons, and retro `--aq-*` design tokens
-- 5 built-in themes (`Midnight Cassette`, `CRT Purple`, `Analog Amber`, `Retro Terminal`, `Classic Gray`) with Reduced Motion toggle
-- Collapsible sidebar, optional right context panel (`Queue`, `Info`, `Scope`), and persistent bottom player deck shell (transport controls honestly disabled until Milestone 4)
+- 5 built-in themes (`Midnight Cassette`, `CRT Purple`, `Analog Amber`, `Retro Terminal`, `Classic Gray`), Reduced Motion, and UI Density (`Comfortable` / `Compact`)
+- Persistent, resizable, customizable sidebar (pin, hide, reorder, collapse, default landing page, layout reset)
+- Dedicated shell pages (Home, Search with source filters & history, Library tabs, Playlists, Downloads/Cache, tabbed Settings with Provider capability cards)
+- Customizable keyboard shortcuts (`Ctrl+K`, `Ctrl+B`, `Ctrl+,`, `Alt+1..4`, `?` help modal)
 - Strict Tauri capabilities, restrictive CSP, and automated CI checks
 
 ### In Development
 
-- Customizable sidebar ordering, persistent layout state, and keyboard shortcuts (Milestone 3)
 - Local audio engine (`symphonia` + `cpal` + `rubato`) & SQLite/FTS5 library scanner (Milestone 4)
 
 ### Planned

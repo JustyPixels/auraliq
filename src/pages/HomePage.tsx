@@ -42,9 +42,20 @@ export function HomePage({ appInfo, runtimeStatus, ipcError, onOpenSettings }: H
             </div>
             <div className="aq-kv-item">
               <span className="aq-kv-label">Milestone</span>
-              <span className="aq-kv-val">M2 Design System</span>
+              <span className="aq-kv-val">M3 Core App Shell</span>
             </div>
           </div>
+        </div>
+        <div className="aq-row-wrap" style={{ marginTop: "1rem" }}>
+          <span className="aq-kv-label" style={{ margin: 0 }}>
+            Shortcuts:
+          </span>
+          <kbd className="aq-kbd">Ctrl+K</kbd>
+          <span style={{ fontSize: "0.8rem", color: "var(--aq-muted)" }}>Search</span>
+          <kbd className="aq-kbd">Ctrl+B</kbd>
+          <span style={{ fontSize: "0.8rem", color: "var(--aq-muted)" }}>Sidebar</span>
+          <kbd className="aq-kbd">?</kbd>
+          <span style={{ fontSize: "0.8rem", color: "var(--aq-muted)" }}>All Shortcuts</span>
         </div>
         {ipcError && (
           <p

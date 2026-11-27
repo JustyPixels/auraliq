@@ -1,35 +1,67 @@
+import { HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../components/Badge";
+import { Button } from "../components/Button";
+import { ShortcutsModal } from "../components/ShortcutsModal";
 import { useAppInfo } from "../hooks/useAppInfo";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { DownloadsPage } from "../pages/DownloadsPage";
 import { HomePage } from "../pages/HomePage";
+import { LibraryShellPage, type LibraryTabId } from "../pages/LibraryShellPage";
+import { PlaylistsPage } from "../pages/PlaylistsPage";
+import { SearchPage } from "../pages/SearchPage";
 import { SectionPlaceholderPage } from "../pages/SectionPlaceholderPage";
 import { SettingsPage } from "../pages/SettingsPage";
+import { useLayoutStore } from "../stores/useLayoutStore";
 import { useThemeStore } from "../stores/useThemeStore";
 import { getThemeById } from "../themes/applyTheme";
-import { NAV_ITEMS, type NavSectionId } from "./nav";
+import { NAV_ITEMS } from "./nav";
 import { PlayerBar } from "./PlayerBar";
-import { RightPanel, type RightPanelTab } from "./RightPanel";
+import { RightPanel } from "./RightPanel";
 import { Sidebar } from "./Sidebar";
 
+const LIBRARY_SECTIONS = new Set<string>([
+  "library",
+  "local",
+  "artists",
+  "albums",
+  "favorites",
+  "recent",
+]);
+
 export function AppShell() {
-  const [activeSection, setActiveSection] = useState<NavSectionId>("home");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [rightPanelOpen, setRightPanelOpen] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>("queue");
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const {
+    activeSection,
+    sidebarCollapsed,
+    sidebarWidth,
+    navOrder,
+    hiddenSections,
+    pinnedSections,
+    rightPanelOpen,
+    rightPanelTab,
+    setActiveSection,
+    toggleSidebarCollapsed,
+    setSidebarWidth,
+    toggleRightPanelTab,
+    setRightPanelOpen,
+    setRightPanelTab,
+  } = useLayoutStore();
 
   const { info, status, error } = useAppInfo();
   const themeId = useThemeStore((state) => state.themeId);
   const currentTheme = getThemeById(themeId);
   const currentNav = NAV_ITEMS.find((item) => item.id === activeSection) ?? NAV_ITEMS[0];
 
-  const handleToggleRightPanelTab = (tab: RightPanelTab) => {
-    if (rightPanelOpen && rightPanelTab === tab) {
-      setRightPanelOpen(false);
-      return;
-    }
-    setRightPanelTab(tab);
-    setRightPanelOpen(true);
-  };
+  useKeyboardShortcuts({
+    helpOpen,
+    onNavigate: setActiveSection,
+    onToggleSidebar: toggleSidebarCollapsed,
+    onToggleQueue: () => toggleRightPanelTab("queue"),
+    onToggleHelp: () => setHelpOpen((prev) => !prev),
+    onCloseHelp: () => setHelpOpen(false),
+  });
 
   const ipcBadge =
     status === "tauri" ? (
@@ -51,14 +83,28 @@ export function AppShell() {
         <Sidebar
           activeSection={activeSection}
           collapsed={sidebarCollapsed}
+          sidebarWidth={sidebarWidth}
+          navOrder={navOrder}
+          hiddenSections={hiddenSections}
+          pinnedSections={pinnedSections}
           onSelectSection={setActiveSection}
-          onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+          onToggleCollapse={toggleSidebarCollapsed}
+          onResizeSidebar={setSidebarWidth}
         />
 
         <div className="aq-main">
           <header className="aq-topbar">
             <h1 className="aq-topbar__title">{currentNav.label}</h1>
             <div className="aq-topbar__actions">
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Keyboard shortcuts"
+                title="Keyboard shortcuts (?)"
+                onClick={() => setHelpOpen(true)}
+              >
+                <HelpCircle size={16} />
+              </Button>
               <Badge tone="neutral">{currentTheme.name}</Badge>
               {ipcBadge}
             </div>
@@ -73,10 +119,14 @@ export function AppShell() {
                 onOpenSettings={() => setActiveSection("settings")}
               />
             )}
-            {activeSection === "settings" && <SettingsPage appInfo={info} runtimeStatus={status} />}
-            {activeSection !== "home" && activeSection !== "settings" && (
-              <SectionPlaceholderPage item={currentNav} />
+            {activeSection === "search" && <SearchPage />}
+            {LIBRARY_SECTIONS.has(activeSection) && (
+              <LibraryShellPage key={activeSection} initialTab={activeSection as LibraryTabId} />
             )}
+            {activeSection === "playlists" && <PlaylistsPage />}
+            {activeSection === "downloads" && <DownloadsPage />}
+            {activeSection === "settings" && <SettingsPage appInfo={info} runtimeStatus={status} />}
+            {activeSection === "discover" && <SectionPlaceholderPage item={currentNav} />}
           </main>
         </div>
 
@@ -92,8 +142,10 @@ export function AppShell() {
       <PlayerBar
         rightPanelOpen={rightPanelOpen}
         rightPanelTab={rightPanelTab}
-        onToggleRightPanelTab={handleToggleRightPanelTab}
+        onToggleRightPanelTab={toggleRightPanelTab}
       />
+
+      <ShortcutsModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

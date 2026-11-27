@@ -38,11 +38,11 @@
 
 ---
 
-## Milestone 3 — Core Application Shell (`0.1.x`)
+## Milestone 3 — Core Application Shell (`0.1.x`) [COMPLETED]
 
-- [ ] Implement navigation (Home, Search, Discover, Library, Playlists, Downloads, Settings)
-- [ ] Implement customizable/collapsible/resizable sidebar and persistent layout settings
-- [ ] Implement theme switching and keyboard shortcuts foundation
+- [x] Implement navigation (Home, Search, Discover, Library, Playlists, Downloads, Settings)
+- [x] Implement customizable/collapsible/resizable sidebar and persistent layout settings
+- [x] Implement theme switching, UI density, provider capability cards, and keyboard shortcuts foundation
 
 ---
 

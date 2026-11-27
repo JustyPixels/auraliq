@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
+import { useLayoutStore } from "../stores/useLayoutStore";
+import { useShortcutsStore } from "../stores/useShortcutsStore";
 import { App } from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -11,6 +13,8 @@ describe("App", () => {
   afterEach(() => {
     delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
     localStorage.clear();
+    useLayoutStore.getState().resetLayout();
+    useShortcutsStore.getState().resetShortcuts();
     vi.clearAllMocks();
   });
 
@@ -26,12 +30,34 @@ describe("App", () => {
     expect(playButton).toHaveAttribute("title", "Audio engine scheduled for Milestone 4");
   });
 
-  it("navigates across sections and toggles sidebar and right panel", () => {
+  it("navigates to Search, Playlists, Downloads, and Settings tabs", () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Local Music" }));
-    expect(screen.getByText("Local Music — Scheduled")).toBeInTheDocument();
-    expect(screen.getByText("Milestone 4")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(screen.getByLabelText("Search music")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Internet Archive" }));
+    expect(screen.getByRole("button", { name: "Internet Archive" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Playlists" }));
+    expect(screen.getByRole("button", { name: "New Playlist" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Downloads" }));
+    expect(screen.getByText("Download Manager Scheduled")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Providers" }));
+    expect(screen.getByText("Internet Archive")).toBeInTheDocument();
+    expect(screen.getByText("YouTube")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Layout & Sidebar" }));
+    expect(screen.getByLabelText("Default Landing Page")).toBeInTheDocument();
+  });
+
+  it("toggles sidebar, right panel, and shortcuts modal", () => {
+    render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
@@ -39,8 +65,8 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Toggle queue panel" }));
     expect(screen.getByText("Playback Queue Empty")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Close right panel" }));
-    expect(screen.queryByText("Playback Queue Empty")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
   });
 
   it("switches themes and updates document attributes", () => {
