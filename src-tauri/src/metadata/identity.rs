@@ -104,14 +104,9 @@ pub fn tracks_are_compatible(a: &TrackRecord, b: &TrackRecord) -> bool {
         return false;
     }
 
-    if a.duration_ms > 0
+    !(a.duration_ms > 0
         && b.duration_ms > 0
-        && (a.duration_ms - b.duration_ms).abs() > DURATION_TOLERANCE_MS
-    {
-        return false;
-    }
-
-    true
+        && (a.duration_ms - b.duration_ms).abs() > DURATION_TOLERANCE_MS)
 }
 
 pub fn find_duplicate_groups(tracks: &[TrackRecord]) -> Vec<DuplicateGroup> {

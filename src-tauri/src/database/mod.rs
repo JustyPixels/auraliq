@@ -644,10 +644,7 @@ impl Database {
                         return false;
                     }
                 }
-                if filters.favorites_only.unwrap_or(false) && !t.is_favorite {
-                    return false;
-                }
-                true
+                !filters.favorites_only.unwrap_or(false) || t.is_favorite
             })
             .collect();
 
