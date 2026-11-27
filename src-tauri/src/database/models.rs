@@ -108,3 +108,60 @@ pub struct ScanSummary {
     pub missing: usize,
     pub errors: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmartPlaylistRule {
+    pub field: String,
+    pub operator: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmartPlaylistRecord {
+    pub id: i64,
+    pub name: String,
+    pub match_mode: String,
+    pub rules: Vec<SmartPlaylistRule>,
+    pub created_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CollectionRecord {
+    pub id: i64,
+    pub name: String,
+    pub description: String,
+    pub track_count: i64,
+    pub created_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DuplicateGroup {
+    pub canonical_key: String,
+    pub display_title: String,
+    pub display_artist: String,
+    pub tracks: Vec<TrackRecord>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrackIdentityLink {
+    pub track_a_id: i64,
+    pub track_b_id: i64,
+    pub track_a_title: String,
+    pub track_a_source: String,
+    pub track_b_title: String,
+    pub track_b_source: String,
+    pub confidence: f64,
+    pub match_reason: String,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SearchFilters {
+    pub query: String,
+    pub source: Option<String>,
+    pub genre: Option<String>,
+    pub artist: Option<String>,
+    pub min_duration_sec: Option<i64>,
+    pub max_duration_sec: Option<i64>,
+    pub favorites_only: Option<bool>,
+}

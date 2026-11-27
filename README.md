@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.3.0 — Milestone 5](https://img.shields.io/badge/Status-v0.3.0%20Milestone%205-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.3.1 — Milestone 6](https://img.shields.io/badge/Status-v0.3.1%20Milestone%206-4c1d95.svg)](ROADMAP.md)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
 
@@ -24,18 +24,19 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.3.0 — Milestone 5 Player & Audio Experience)
+### Available (v0.3.1 — Milestone 6 Unified Library & Search)
 
 - Dedicated-thread Rust audio engine (`symphonia` + `cpal` + stereo resampler) supporting MP3, FLAC, WAV, AAC/M4A, OGG/Vorbis, Opus, and ALAC
 - Windows SMTC & hardware media keys (`souvlaki`), CPAL audio output device selection, and automatic stream error recovery
 - Real-time `realfft` spectrum/waveform tap with Canvas visualizers (`Retro Bars`, `CRT Oscilloscope`, `Cassette Reels`) and Low-Performance mode
 - Recursive local folder scanning (`walkdir`) with `lofty` metadata extraction and cached embedded/external album artwork
-- SQLite (`rusqlite` + WAL + FTS5) library storage, M3U/M3U8/PLS playlists, queue reordering, playback notifications, and persistent state
+- SQLite (`rusqlite` + WAL + FTS5) library storage, filtered search (source, genre, duration, favorites), M3U/M3U8/PLS playlists, smart playlists, custom collections, duplicate detection, and non-destructive track identity matching
+- Local Discover page (Recently Added, Top Played, Never Played, Genres, Shuffle 10 Random)
 - 5 built-in retro themes, UI density, resizable/customizable sidebar, and rebindable keyboard shortcuts
 
 ### In Development
 
-- Unified track identity matching, custom collections, and smart playlists (Milestone 6)
+- Modular online provider framework, `ProviderCapabilities` traits, and `keyring` token storage (Milestone 7)
 
 ### Planned
 

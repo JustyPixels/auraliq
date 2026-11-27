@@ -55,6 +55,14 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Playlists" }));
     expect(screen.getByRole("button", { name: "New Playlist" })).toBeDisabled();
+    expect(screen.getByText("Smart Playlists")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Discover" }));
+    expect(screen.getByText("Local Discovery")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Your Library" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Duplicates" }));
+    expect(screen.getByText("No Duplicate Recordings Detected")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Downloads" }));
     expect(screen.getByText("Download Manager Scheduled")).toBeInTheDocument();

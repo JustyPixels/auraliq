@@ -1,14 +1,16 @@
-import { Play, Search, Trash2 } from "lucide-react";
+import { ListPlus, Play, Search, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { backendApi, formatDurationMs, isTauriRuntime } from "../api/backend";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { Panel } from "../components/Panel";
+import { useLibraryStore } from "../stores/useLibraryStore";
 import { usePlayerStore } from "../stores/usePlayerStore";
 import type { TrackRecord } from "../types/music";
 
 type SourceFilter = "all" | "local" | "internet_archive" | "radio_browser";
+type DurationFilter = "any" | "short" | "medium" | "long";
 
 const SOURCE_FILTERS: readonly { id: SourceFilter; label: string }[] = [
   { id: "all", label: "All Sources" },
@@ -31,10 +33,15 @@ function loadHistory(): string[] {
 export function SearchPage() {
   const [query, setQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [genreFilter, setGenreFilter] = useState("");
+  const [durationFilter, setDurationFilter] = useState<DurationFilter>("any");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [history, setHistory] = useState<string[]>(loadHistory);
   const [results, setResults] = useState<TrackRecord[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const playTrackList = usePlayerStore((state) => state.playTrackList);
+
+  const genres = useLibraryStore((state) => state.genres);
+  const { playTrackList, addToQueue } = usePlayerStore();
   const inTauri = isTauriRuntime();
 
   useEffect(() => {
@@ -47,15 +54,30 @@ export function SearchPage() {
       return;
     }
     let cancelled = false;
-    void backendApi.searchTracks(query).then((hits) => {
-      if (!cancelled) {
-        setResults(hits);
-      }
-    });
+    const min_duration_sec =
+      durationFilter === "medium" ? 180 : durationFilter === "long" ? 360 : undefined;
+    const max_duration_sec =
+      durationFilter === "short" ? 180 : durationFilter === "medium" ? 360 : undefined;
+
+    void backendApi
+      .searchTracksFiltered({
+        query,
+        source: sourceFilter,
+        genre: genreFilter || undefined,
+        min_duration_sec,
+        max_duration_sec,
+        favorites_only: favoritesOnly,
+      })
+      .then((hits) => {
+        if (!cancelled) {
+          setResults(hits);
+        }
+      });
+
     return () => {
       cancelled = true;
     };
-  }, [inTauri, query, sourceFilter]);
+  }, [durationFilter, favoritesOnly, genreFilter, inTauri, query, sourceFilter]);
 
   const saveSearch = (term: string) => {
     const clean = term.trim();
@@ -121,6 +143,42 @@ export function SearchPage() {
                 {filter.label}
               </Button>
             ))}
+
+            <select
+              aria-label="Filter by genre"
+              className="aq-select"
+              value={genreFilter}
+              onChange={(e) => setGenreFilter(e.target.value)}
+            >
+              <option value="">All Genres</option>
+              {genres.map((g) => (
+                <option key={g.name} value={g.name}>
+                  {g.name} ({g.track_count})
+                </option>
+              ))}
+            </select>
+
+            <select
+              aria-label="Filter by duration"
+              className="aq-select"
+              value={durationFilter}
+              onChange={(e) => setDurationFilter(e.target.value as DurationFilter)}
+            >
+              <option value="any">Any Duration</option>
+              <option value="short">Under 3 min</option>
+              <option value="medium">3 – 6 min</option>
+              <option value="long">Over 6 min</option>
+            </select>
+
+            <Button
+              size="sm"
+              variant="secondary"
+              active={favoritesOnly}
+              aria-pressed={favoritesOnly}
+              onClick={() => setFavoritesOnly((prev) => !prev)}
+            >
+              Favorites Only
+            </Button>
           </div>
         </form>
       </Panel>
@@ -167,9 +225,16 @@ export function SearchPage() {
                 <div className="aq-truncate" style={{ color: "var(--aq-muted)" }}>
                   {track.album}
                 </div>
-                <Badge tone="accent">LOCAL</Badge>
+                <Badge tone="accent">{track.source_provider.toUpperCase()}</Badge>
                 <span className="aq-timecode">{formatDurationMs(track.duration_ms)}</span>
-                <span />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`Add ${track.title} to queue`}
+                  onClick={() => addToQueue(track)}
+                >
+                  <ListPlus size={14} />
+                </Button>
               </div>
             ))}
           </div>

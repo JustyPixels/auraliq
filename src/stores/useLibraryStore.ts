@@ -9,10 +9,15 @@ import {
 import type {
   AlbumSummary,
   ArtistSummary,
+  CollectionRecord,
+  DuplicateGroup,
   GenreSummary,
   LibraryFolder,
   PlaylistRecord,
   ScanSummary,
+  SmartPlaylistRecord,
+  SmartPlaylistRule,
+  TrackIdentityLink,
   TrackRecord,
 } from "../types/music";
 
@@ -26,6 +31,10 @@ export interface LibraryStore {
   genres: GenreSummary[];
   recentTracks: TrackRecord[];
   playlists: PlaylistRecord[];
+  smartPlaylists: SmartPlaylistRecord[];
+  collections: CollectionRecord[];
+  duplicateGroups: DuplicateGroup[];
+  identityLinks: TrackIdentityLink[];
   sortBy: LibrarySort;
   scanning: boolean;
   lastScan: ScanSummary | null;
@@ -43,6 +52,21 @@ export interface LibraryStore {
   removeTrackFromPlaylist: (playlistId: number, trackId: number) => Promise<void>;
   importPlaylistFromDialog: () => Promise<PlaylistRecord | null>;
   exportPlaylistToDialog: (playlist: PlaylistRecord) => Promise<void>;
+  createSmartPlaylist: (
+    name: string,
+    matchMode: string,
+    rules: SmartPlaylistRule[],
+  ) => Promise<SmartPlaylistRecord | null>;
+  deleteSmartPlaylist: (smartId: number) => Promise<void>;
+  createCollection: (name: string) => Promise<CollectionRecord | null>;
+  deleteCollection: (collectionId: number) => Promise<void>;
+  addTrackToCollection: (collectionId: number, trackId: number) => Promise<void>;
+  removeTrackFromCollection: (collectionId: number, trackId: number) => Promise<void>;
+  setIdentityLinkStatus: (
+    trackAId: number,
+    trackBId: number,
+    status: "confirmed" | "dismissed",
+  ) => Promise<void>;
 }
 
 function errMsg(err: unknown): string {
@@ -57,6 +81,10 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   genres: [],
   recentTracks: [],
   playlists: [],
+  smartPlaylists: [],
+  collections: [],
+  duplicateGroups: [],
+  identityLinks: [],
   sortBy: "title",
   scanning: false,
   lastScan: null,
@@ -81,18 +109,45 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     }
     try {
       const sort = get().sortBy;
-      const [folders, tracks, artists, albums, genres, recentTracks, playlists] = await Promise.all(
-        [
-          backendApi.listFolders(),
-          backendApi.listTracks(false, sort),
-          backendApi.listArtists(),
-          backendApi.listAlbums(),
-          backendApi.listGenres(),
-          backendApi.listRecentlyPlayed(25),
-          backendApi.listPlaylists(),
-        ],
-      );
-      set({ folders, tracks, artists, albums, genres, recentTracks, playlists, error: null });
+      const [
+        folders,
+        tracks,
+        artists,
+        albums,
+        genres,
+        recentTracks,
+        playlists,
+        smartPlaylists,
+        collections,
+        duplicateGroups,
+        identityLinks,
+      ] = await Promise.all([
+        backendApi.listFolders(),
+        backendApi.listTracks(false, sort),
+        backendApi.listArtists(),
+        backendApi.listAlbums(),
+        backendApi.listGenres(),
+        backendApi.listRecentlyPlayed(25),
+        backendApi.listPlaylists(),
+        backendApi.listSmartPlaylists(),
+        backendApi.listCollections(),
+        backendApi.findDuplicateTracks(),
+        backendApi.listIdentityLinks(),
+      ]);
+      set({
+        folders,
+        tracks,
+        artists,
+        albums,
+        genres,
+        recentTracks,
+        playlists,
+        smartPlaylists,
+        collections,
+        duplicateGroups,
+        identityLinks,
+        error: null,
+      });
     } catch (err) {
       set({ error: errMsg(err) });
     }
@@ -247,6 +302,94 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
         return;
       }
       await backendApi.exportPlaylistFile(playlist.id, target);
+    } catch (err) {
+      set({ error: errMsg(err) });
+    }
+  },
+
+  createSmartPlaylist: async (name, matchMode, rules) => {
+    if (!isTauriRuntime() || !name.trim()) {
+      return null;
+    }
+    try {
+      const created = await backendApi.createSmartPlaylist(name.trim(), matchMode, rules);
+      await get().refreshLibrary();
+      return created;
+    } catch (err) {
+      set({ error: errMsg(err) });
+      return null;
+    }
+  },
+
+  deleteSmartPlaylist: async (smartId) => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      await backendApi.deleteSmartPlaylist(smartId);
+      await get().refreshLibrary();
+    } catch (err) {
+      set({ error: errMsg(err) });
+    }
+  },
+
+  createCollection: async (name) => {
+    if (!isTauriRuntime() || !name.trim()) {
+      return null;
+    }
+    try {
+      const created = await backendApi.createCollection(name.trim());
+      await get().refreshLibrary();
+      return created;
+    } catch (err) {
+      set({ error: errMsg(err) });
+      return null;
+    }
+  },
+
+  deleteCollection: async (collectionId) => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      await backendApi.deleteCollection(collectionId);
+      await get().refreshLibrary();
+    } catch (err) {
+      set({ error: errMsg(err) });
+    }
+  },
+
+  addTrackToCollection: async (collectionId, trackId) => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      await backendApi.addTrackToCollection(collectionId, trackId);
+      await get().refreshLibrary();
+    } catch (err) {
+      set({ error: errMsg(err) });
+    }
+  },
+
+  removeTrackFromCollection: async (collectionId, trackId) => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      await backendApi.removeTrackFromCollection(collectionId, trackId);
+      await get().refreshLibrary();
+    } catch (err) {
+      set({ error: errMsg(err) });
+    }
+  },
+
+  setIdentityLinkStatus: async (trackAId, trackBId, status) => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      await backendApi.setIdentityLinkStatus(trackAId, trackBId, status);
+      await get().refreshLibrary();
     } catch (err) {
       set({ error: errMsg(err) });
     }

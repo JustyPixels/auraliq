@@ -1,17 +1,24 @@
 import {
+  Check,
+  Copy,
   Disc3,
   FileMusic,
   FolderPlus,
   Heart,
+  Layers,
   Library,
+  Link2,
   ListPlus,
   Mic2,
   Play,
+  Plus,
   RefreshCw,
+  Tag,
   Trash2,
+  X,
 } from "lucide-react";
-import { useState } from "react";
-import { formatDurationMs, isTauriRuntime, resolveArtworkUrl } from "../api/backend";
+import { useEffect, useState } from "react";
+import { backendApi, formatDurationMs, isTauriRuntime, resolveArtworkUrl } from "../api/backend";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
@@ -20,13 +27,27 @@ import { type LibrarySort, useLibraryStore } from "../stores/useLibraryStore";
 import { usePlayerStore } from "../stores/usePlayerStore";
 import type { TrackRecord } from "../types/music";
 
-export type LibraryTabId = "library" | "local" | "artists" | "albums" | "favorites" | "recent";
+export type LibraryTabId =
+  | "library"
+  | "local"
+  | "artists"
+  | "albums"
+  | "genres"
+  | "collections"
+  | "duplicates"
+  | "matches"
+  | "favorites"
+  | "recent";
 
 const LIBRARY_TABS: readonly { id: LibraryTabId; label: string }[] = [
   { id: "library", label: "All Music" },
   { id: "local", label: "Local Folders" },
   { id: "artists", label: "Artists" },
   { id: "albums", label: "Albums" },
+  { id: "genres", label: "Genres" },
+  { id: "collections", label: "Collections" },
+  { id: "duplicates", label: "Duplicates" },
+  { id: "matches", label: "Track Matches" },
   { id: "favorites", label: "Favorites" },
   { id: "recent", label: "Recently Played" },
 ];
@@ -39,6 +60,10 @@ interface LibraryShellPageProps {
 
 export function LibraryShellPage({ initialTab }: LibraryShellPageProps) {
   const [tab, setTab] = useState<LibraryTabId>(initialTab);
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
+  const [collectionTracks, setCollectionTracks] = useState<TrackRecord[]>([]);
   const inTauri = isTauriRuntime();
 
   const {
@@ -46,8 +71,12 @@ export function LibraryShellPage({ initialTab }: LibraryShellPageProps) {
     tracks,
     artists,
     albums,
+    genres,
     recentTracks,
     playlists,
+    collections,
+    duplicateGroups,
+    identityLinks,
     sortBy,
     scanning,
     lastScan,
@@ -58,16 +87,42 @@ export function LibraryShellPage({ initialTab }: LibraryShellPageProps) {
     scanLibrary,
     toggleFavorite,
     addTrackToPlaylist,
+    createCollection,
+    deleteCollection,
+    addTrackToCollection,
+    removeTrackFromCollection,
+    setIdentityLinkStatus,
   } = useLibraryStore();
 
   const { currentTrack, playTrackList, addToQueue } = usePlayerStore();
+
+  const activeCollection =
+    collections.find((c) => c.id === selectedCollectionId) ?? collections[0] ?? null;
+
+  useEffect(() => {
+    if (!activeCollection || !inTauri) {
+      setCollectionTracks([]);
+      return;
+    }
+    let cancelled = false;
+    void backendApi.getCollectionTracks(activeCollection.id).then((items) => {
+      if (!cancelled) {
+        setCollectionTracks(items);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCollection, collections, inTauri]);
 
   const displayedTracks: TrackRecord[] =
     tab === "favorites"
       ? tracks.filter((t) => t.is_favorite)
       : tab === "recent"
         ? recentTracks
-        : tracks;
+        : selectedGenre
+          ? tracks.filter((t) => t.genre === selectedGenre)
+          : tracks;
 
   const renderTrackList = (items: TrackRecord[], emptyTitle: string, emptyDesc: string) => {
     if (items.length === 0) {
@@ -160,6 +215,27 @@ export function LibraryShellPage({ initialTab }: LibraryShellPageProps) {
                     ))}
                   </select>
                 )}
+                {collections.length > 0 && (
+                  <select
+                    aria-label={`Add ${track.title} to collection`}
+                    className="aq-select"
+                    defaultValue=""
+                    onChange={(e) => {
+                      const cid = Number(e.target.value);
+                      if (cid > 0) {
+                        void addTrackToCollection(cid, track.id);
+                      }
+                      e.target.value = "";
+                    }}
+                  >
+                    <option value="">+ Collection</option>
+                    {collections.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
           );
@@ -170,7 +246,7 @@ export function LibraryShellPage({ initialTab }: LibraryShellPageProps) {
 
   return (
     <Panel
-      title="Local Library"
+      title="Unified Library"
       ledActive={folders.length > 0}
       badge={<Badge>{tracks.length} tracks</Badge>}
       headerActions={
@@ -217,7 +293,12 @@ export function LibraryShellPage({ initialTab }: LibraryShellPageProps) {
             active={tab === item.id}
             role="tab"
             aria-selected={tab === item.id}
-            onClick={() => setTab(item.id)}
+            onClick={() => {
+              setTab(item.id);
+              if (item.id !== "library") {
+                setSelectedGenre(null);
+              }
+            }}
           >
             {item.label}
           </Button>
@@ -240,37 +321,34 @@ export function LibraryShellPage({ initialTab }: LibraryShellPageProps) {
       )}
 
       <div style={{ marginTop: "1rem" }}>
-        {tab === "local" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {folders.length === 0 ? (
-              <EmptyState
-                icon={<FileMusic size={20} />}
-                title="No Music Folders Added"
-                description={
-                  inTauri
-                    ? "Click 'Add Music Folder' to scan MP3, FLAC, WAV, AAC/M4A, OGG, Opus, and ALAC files."
-                    : "Launch the desktop Tauri app to add local music folders and scan audio files."
-                }
-              />
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                {folders.map((folder) => (
-                  <div key={folder.id} className="aq-list-row">
-                    <span className="aq-kv-val">{folder.path}</span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Remove folder ${folder.path}`}
-                      onClick={() => void removeFolder(folder.id)}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {tab === "local" &&
+          (folders.length === 0 ? (
+            <EmptyState
+              icon={<FileMusic size={20} />}
+              title="No Music Folders Added"
+              description={
+                inTauri
+                  ? "Click 'Add Music Folder' to scan MP3, FLAC, WAV, AAC/M4A, OGG, Opus, and ALAC files."
+                  : "Launch the desktop Tauri app to add local music folders and scan audio files."
+              }
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+              {folders.map((folder) => (
+                <div key={folder.id} className="aq-list-row">
+                  <span className="aq-kv-val">{folder.path}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Remove folder ${folder.path}`}
+                    onClick={() => void removeFolder(folder.id)}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ))}
 
         {tab === "artists" &&
           (artists.length === 0 ? (
@@ -325,18 +403,245 @@ export function LibraryShellPage({ initialTab }: LibraryShellPageProps) {
             </div>
           ))}
 
-        {(tab === "library" || tab === "favorites" || tab === "recent") &&
-          renderTrackList(
-            displayedTracks,
-            tab === "favorites"
-              ? "No Favorite Tracks Yet"
-              : tab === "recent"
-                ? "No Recently Played Tracks"
-                : "Your Library Is Empty",
-            tab === "recent"
-              ? "Play any track to record it in your local playback history."
-              : "Add a local music folder to index and play your music.",
-          )}
+        {tab === "genres" &&
+          (genres.length === 0 ? (
+            <EmptyState
+              icon={<Tag size={20} />}
+              title="No Genres Indexed"
+              description="Scan local tracks to browse by genre."
+            />
+          ) : (
+            <div className="aq-provider-grid">
+              {genres.map((genre) => (
+                <button
+                  key={genre.name}
+                  type="button"
+                  className="aq-provider-card"
+                  style={{ textAlign: "left", cursor: "pointer" }}
+                  onClick={() => {
+                    setSelectedGenre(genre.name);
+                    setTab("library");
+                  }}
+                >
+                  <strong>{genre.name}</strong>
+                  <Badge>{genre.track_count} tracks</Badge>
+                </button>
+              ))}
+            </div>
+          ))}
+
+        {tab === "collections" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newCollectionName.trim()) {
+                  return;
+                }
+                void createCollection(newCollectionName).then((col) => {
+                  setNewCollectionName("");
+                  if (col) {
+                    setSelectedCollectionId(col.id);
+                  }
+                });
+              }}
+              className="aq-row-wrap"
+            >
+              <input
+                type="text"
+                className="aq-input"
+                style={{ flex: 1, minWidth: "180px" }}
+                placeholder="New custom collection name..."
+                aria-label="New collection name"
+                disabled={!inTauri}
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+              />
+              <Button
+                type="submit"
+                size="sm"
+                variant="primary"
+                disabled={!inTauri || !newCollectionName.trim()}
+                title={!inTauri ? DESKTOP_REQUIRED_TIP : "Create collection"}
+              >
+                <Plus size={14} />
+                Create Collection
+              </Button>
+            </form>
+
+            {collections.length === 0 ? (
+              <EmptyState
+                icon={<Layers size={20} />}
+                title="No Custom Collections"
+                description="Create a collection to group albums, moods, or lossless archives."
+              />
+            ) : (
+              <div className="aq-grid-2">
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                  {collections.map((col) => (
+                    <div
+                      key={col.id}
+                      className="aq-list-row"
+                      style={
+                        activeCollection?.id === col.id
+                          ? { borderColor: "var(--aq-accent)" }
+                          : undefined
+                      }
+                    >
+                      <button
+                        type="button"
+                        className="aq-btn aq-btn--ghost aq-truncate"
+                        style={{ flex: 1, justifyContent: "flex-start" }}
+                        onClick={() => setSelectedCollectionId(col.id)}
+                      >
+                        <strong className="aq-truncate">{col.name}</strong>
+                        <Badge>{col.track_count}</Badge>
+                      </button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={`Delete collection ${col.name}`}
+                        onClick={() => void deleteCollection(col.id)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                  {collectionTracks.map((t, idx) => (
+                    <div key={t.id} className="aq-list-row">
+                      <button
+                        type="button"
+                        className="aq-btn aq-btn--ghost aq-truncate"
+                        style={{ flex: 1, justifyContent: "flex-start" }}
+                        onClick={() => void playTrackList(collectionTracks, idx)}
+                      >
+                        <Play size={13} />
+                        <span className="aq-truncate">{t.title}</span>
+                      </button>
+                      {activeCollection && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Remove ${t.title} from collection`}
+                          onClick={() => void removeTrackFromCollection(activeCollection.id, t.id)}
+                        >
+                          <X size={13} />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === "duplicates" &&
+          (duplicateGroups.length === 0 ? (
+            <EmptyState
+              icon={<Copy size={20} />}
+              title="No Duplicate Recordings Detected"
+              description="Tracks are compared by normalized title/artist, version qualifier (live/remix/cover/explicit), and duration tolerance. Distinct versions are never merged."
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {duplicateGroups.map((group) => (
+                <div key={group.canonical_key} className="aq-provider-card">
+                  <div className="aq-row-wrap" style={{ justifyContent: "space-between" }}>
+                    <strong>
+                      {group.display_title} — {group.display_artist}
+                    </strong>
+                    <Badge tone="warn">{group.tracks.length} copies</Badge>
+                  </div>
+                  {group.tracks.map((t) => (
+                    <div key={t.id} className="aq-list-row">
+                      <Badge>{t.format.toUpperCase()}</Badge>
+                      <span className="aq-truncate" style={{ flex: 1, fontSize: "0.78rem" }}>
+                        {t.file_path}
+                      </span>
+                      <span className="aq-timecode">{formatDurationMs(t.duration_ms)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+
+        {tab === "matches" &&
+          (identityLinks.length === 0 ? (
+            <EmptyState
+              icon={<Link2 size={20} />}
+              title="No Pending Track Identity Matches"
+              description="Probable cross-source or multi-format matches appear here for explicit user confirmation."
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              {identityLinks.map((link) => (
+                <div key={`${link.track_a_id}-${link.track_b_id}`} className="aq-provider-card">
+                  <div className="aq-row-wrap" style={{ justifyContent: "space-between" }}>
+                    <strong>
+                      {link.track_a_title} ↔ {link.track_b_title}
+                    </strong>
+                    <Badge tone={link.status === "confirmed" ? "ok" : "accent"}>
+                      {Math.round(link.confidence * 100)}% • {link.status}
+                    </Badge>
+                  </div>
+                  <span style={{ fontSize: "0.78rem", color: "var(--aq-muted)" }}>
+                    {link.match_reason}
+                  </span>
+                  <div className="aq-row-wrap">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        void setIdentityLinkStatus(link.track_a_id, link.track_b_id, "confirmed")
+                      }
+                    >
+                      <Check size={14} />
+                      Confirm
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        void setIdentityLinkStatus(link.track_a_id, link.track_b_id, "dismissed")
+                      }
+                    >
+                      <X size={14} />
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+
+        {(tab === "library" || tab === "favorites" || tab === "recent") && (
+          <>
+            {selectedGenre && (
+              <div className="aq-row-wrap" style={{ marginBottom: "0.75rem" }}>
+                <Badge tone="accent">Genre: {selectedGenre}</Badge>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedGenre(null)}>
+                  Clear Filter
+                </Button>
+              </div>
+            )}
+            {renderTrackList(
+              displayedTracks,
+              tab === "favorites"
+                ? "No Favorite Tracks Yet"
+                : tab === "recent"
+                  ? "No Recently Played Tracks"
+                  : "Your Library Is Empty",
+              tab === "recent"
+                ? "Play any track to record it in your local playback history."
+                : "Add a local music folder to index and play your music.",
+            )}
+          </>
+        )}
       </div>
     </Panel>
   );

@@ -560,7 +560,7 @@ fn audio_worker_loop(
                                             loaded.src_rate,
                                             dst_rate,
                                         );
-                                        for pair in stereo.chunks_exact(2) {
+                                        for pair in stereo.as_chunks::<2>().0 {
                                             mono_ring.push_back((pair[0] + pair[1]) * 0.5);
                                             if mono_ring.len() > FFT_SIZE {
                                                 mono_ring.pop_front();

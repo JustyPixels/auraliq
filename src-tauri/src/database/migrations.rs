@@ -108,6 +108,48 @@ CREATE TABLE IF NOT EXISTS playback_state (
 INSERT OR IGNORE INTO playback_state (id) VALUES (1);
 "#;
 
+const MIGRATION_V2: &str = r#"
+CREATE TABLE IF NOT EXISTS smart_playlists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    match_mode TEXT NOT NULL DEFAULT 'all',
+    rules_json TEXT NOT NULL DEFAULT '[]',
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS collections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS collection_tracks (
+    collection_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
+    added_at INTEGER NOT NULL,
+    PRIMARY KEY (collection_id, track_id),
+    FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+    FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS track_identity_links (
+    track_a_id INTEGER NOT NULL,
+    track_b_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'suggested',
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (track_a_id, track_b_id),
+    FOREIGN KEY (track_a_id) REFERENCES tracks(id) ON DELETE CASCADE,
+    FOREIGN KEY (track_b_id) REFERENCES tracks(id) ON DELETE CASCADE
+);
+
+INSERT INTO smart_playlists (name, match_mode, rules_json, created_at)
+VALUES
+    ('Favorites', 'all', '[{"field":"favorite","operator":"is_true","value":""}]', 0),
+    ('Most Played', 'all', '[{"field":"play_count","operator":"gte","value":"3"}]', 0),
+    ('Never Played', 'all', '[{"field":"play_count","operator":"equals","value":"0"}]', 0);
+"#;
+
 pub fn apply_migrations(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;")?;
     let current_version: i64 = conn.query_row("PRAGMA user_version;", [], |row| row.get(0))?;
@@ -116,6 +158,13 @@ pub fn apply_migrations(conn: &Connection) -> Result<(), AppError> {
         let tx = conn.unchecked_transaction()?;
         tx.execute_batch(MIGRATION_V1)?;
         tx.pragma_update(None, "user_version", 1i64)?;
+        tx.commit()?;
+    }
+
+    if current_version < 2 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(MIGRATION_V2)?;
+        tx.pragma_update(None, "user_version", 2i64)?;
         tx.commit()?;
     }
 

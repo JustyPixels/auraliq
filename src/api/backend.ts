@@ -4,12 +4,18 @@ import type {
   AlbumSummary,
   ArtistSummary,
   AudioDeviceInfo,
+  CollectionRecord,
+  DuplicateGroup,
   GenreSummary,
   LibraryFolder,
   PlaybackSnapshot,
   PlaybackStateRecord,
   PlaylistRecord,
   ScanSummary,
+  SearchFilters,
+  SmartPlaylistRecord,
+  SmartPlaylistRule,
+  TrackIdentityLink,
   TrackRecord,
   VisualizerFrame,
 } from "../types/music";
@@ -75,6 +81,31 @@ export const backendApi = {
   listGenres: () => invoke<GenreSummary[]>("list_genres"),
   toggleFavorite: (trackId: number) => invoke<boolean>("toggle_favorite", { trackId }),
   listRecentlyPlayed: (limit = 50) => invoke<TrackRecord[]>("list_recently_played", { limit }),
+  searchTracksFiltered: (filters: SearchFilters) =>
+    invoke<TrackRecord[]>("search_tracks_filtered", { filters }),
+
+  listSmartPlaylists: () => invoke<SmartPlaylistRecord[]>("list_smart_playlists"),
+  createSmartPlaylist: (name: string, matchMode: string, rules: SmartPlaylistRule[]) =>
+    invoke<SmartPlaylistRecord>("create_smart_playlist", { name, matchMode, rules }),
+  deleteSmartPlaylist: (smartId: number) => invoke<void>("delete_smart_playlist", { smartId }),
+  getSmartPlaylistTracks: (smartId: number) =>
+    invoke<TrackRecord[]>("get_smart_playlist_tracks", { smartId }),
+
+  listCollections: () => invoke<CollectionRecord[]>("list_collections"),
+  createCollection: (name: string, description = "") =>
+    invoke<CollectionRecord>("create_collection", { name, description }),
+  deleteCollection: (collectionId: number) => invoke<void>("delete_collection", { collectionId }),
+  getCollectionTracks: (collectionId: number) =>
+    invoke<TrackRecord[]>("get_collection_tracks", { collectionId }),
+  addTrackToCollection: (collectionId: number, trackId: number) =>
+    invoke<void>("add_track_to_collection", { collectionId, trackId }),
+  removeTrackFromCollection: (collectionId: number, trackId: number) =>
+    invoke<void>("remove_track_from_collection", { collectionId, trackId }),
+
+  findDuplicateTracks: () => invoke<DuplicateGroup[]>("find_duplicate_tracks"),
+  listIdentityLinks: () => invoke<TrackIdentityLink[]>("list_identity_links"),
+  setIdentityLinkStatus: (trackAId: number, trackBId: number, status: "confirmed" | "dismissed") =>
+    invoke<void>("set_identity_link_status", { trackAId, trackBId, status }),
 
   listPlaylists: () => invoke<PlaylistRecord[]>("list_playlists"),
   createPlaylist: (name: string, description = "") =>

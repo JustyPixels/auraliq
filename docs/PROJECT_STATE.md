@@ -3,29 +3,30 @@
 > **Read this file first before starting any new work session.**
 
 ## Current Status
-- **Current Milestone**: Milestone 5 — Player & Audio Experience (**COMPLETED**)
-- **Next Milestone**: Milestone 6 — Unified Library & Search (`0.3.x`)
-- **Current Version**: `0.3.0`
+- **Current Milestone**: Milestone 6 — Unified Library & Search (**COMPLETED**)
+- **Next Milestone**: Milestone 7 — Online Provider Framework (`0.4.0`)
+- **Current Version**: `0.3.1`
 - **Repository Status**: `https://github.com/JustyPixels/auraliq` (`main`)
 
 ## What Is Completed
-- **Milestones 0–4**: Research, Tauri v2 + React 19 foundation, brand assets, retro design system, 5 themes, persistent customizable shell, SQLite + FTS5 local music engine, `lofty` metadata/artwork, `symphonia` + `cpal` playback, M3U/PLS playlists.
-- **Milestone 5**:
-  - `src-tauri/src/platform/media_keys.rs`: Windows SMTC & hardware media keys (`souvlaki`) emitting `auraliq://media-control` events.
-  - `src-tauri/src/audio/fft.rs` & `audio/mod.rs`: 512-point `realfft` spectrum/waveform analyzer, CPAL output device enumeration/selection, automatic stream disconnect recovery.
-  - `src/visualizers/AudioVisualizer.tsx`: Canvas visualizer (`Retro Bars`, `CRT Oscilloscope`, `Cassette Reels`, Low-Performance mode) in `RightPanel` `Scope` tab.
-  - `src/components/PlaybackToast.tsx`, queue reordering (`moveQueueItem`), `Stop` button, and `Settings -> Playback` tab.
+- **Milestones 0–5**: Research, Tauri v2 + React 19 foundation, brand assets, retro design system, 5 themes, persistent customizable shell, SQLite + FTS5 local music engine, `lofty` metadata/artwork, `symphonia` + `cpal` playback, Windows SMTC (`souvlaki`), `realfft` Canvas visualizer, playback toasts.
+- **Milestone 6**:
+  - Fixed Rust 1.100.0 CI Clippy lints (`needless_range_loop` in `audio/fft.rs`, `chunks_exact_to_as_chunks` in `audio/mod.rs`).
+  - `src-tauri/src/metadata/identity.rs`: Normalized track fingerprinting, strict version/duration compatibility guard, duplicate grouping, identity link suggestions, smart playlist rule evaluator.
+  - `src-tauri/src/database/migrations.rs` (v2): `smart_playlists` (seeded with `Favorites`, `Most Played`, `Never Played`), `collections`, `collection_tracks`, `track_identity_links`.
+  - Frontend: `SearchPage` filters (source, genre, duration, favorites), `LibraryShellPage` (`Genres`, `Collections`, `Duplicates`, `Track Matches` tabs), `PlaylistsPage` (`Smart Playlists` builder), and `DiscoverPage` (local discovery + Shuffle 10 Random).
 
 ## What Is Currently Working
-- Full local playback, Windows SMTC, device switching, real-time Canvas visualizers, queue management, and playback toasts.
+- Full local library, unified identity matching, duplicate inspection, smart playlists, custom collections, filtered search, and local discovery.
 - All frontend (`prettier`, `eslint`, `tsc`, `vitest`, `vite build`) and Rust (`rustfmt`, `clippy`, `cargo test`) checks pass.
 
 ## What Is Currently Being Developed
-- Nothing actively in flight; ready to begin Milestone 6.
+- Nothing actively in flight; ready to begin Milestone 7.
 
 ## Outstanding Issues & Environment Notes
 1. **Windows Rust Toolchain**: Local `rustup override set stable-x86_64-pc-windows-msvc` is active; always prepend `$env:USERPROFILE\.cargo\bin` to `PATH` before running `cargo` / `rustc` / `pnpm tauri`.
 2. **`frontendDist` Requirement**: Run `pnpm build` before `cargo clippy` / `cargo test`.
+3. **Rust 1.100.0 CI**: GitHub Actions runs newer Clippy lints than local 1.96.0 — avoid index range loops and `.chunks_exact(CONST)`.
 
 ## Known Bugs
 - None.
@@ -34,11 +35,11 @@
 - See [TECHNICAL_DECISIONS.md](architecture/TECHNICAL_DECISIONS.md) (ADR-001 through ADR-012).
 
 ## Next Concrete Task
-Execute **Milestone 6 — Unified Library & Search (`0.3.x`)**:
-1. Non-destructive unified track identity matching (`track_identities` / `track_identity_links` distinguishing live/remix/cover/explicit versions).
-2. Duplicate detection view in Local Library.
-3. Smart playlists (rule-based queries: genre, artist, favorites, play count, recently played, never played) and custom collections.
-4. Enhanced unified Search with source badges, duration/genre/artist filters, and virtualized track lists (`@tanstack/react-virtual`).
+Execute **Milestone 7 — Online Provider Framework (`0.4.0`)**:
+1. Add `reqwest` (`0.13.5`) and `keyring` (`4.2.0`) to `src-tauri/Cargo.toml`.
+2. Implement `MusicProvider` trait, `ProviderCapabilities` profile, `ProviderRegistry`, and `ProviderStatus` (`src-tauri/src/providers/`).
+3. Implement Windows Credential Manager secret storage wrapper (`src-tauri/src/security/`).
+4. Wire provider status/auth/search/stream/download IPC commands and dynamic capability-driven UI in Settings -> Providers.
 
 ## Relevant Commands
 ```powershell

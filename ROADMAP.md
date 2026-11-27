@@ -68,11 +68,11 @@
 
 ---
 
-## Milestone 6 — Unified Library & Search (`0.3.x`)
+## Milestone 6 — Unified Library & Search (`0.3.x`) [COMPLETED]
 
-- [ ] Implement unified search with source badges and filters
-- [ ] Implement non-destructive track identity matching (`track_identity_links`)
-- [ ] Implement duplicate detection, custom collections, and smart playlists
+- [x] Implement unified search with source badges and filters
+- [x] Implement non-destructive track identity matching (`track_identity_links`)
+- [x] Implement duplicate detection, custom collections, smart playlists, and local Discover page
 
 ---
 

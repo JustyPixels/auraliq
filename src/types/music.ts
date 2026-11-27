@@ -103,3 +103,54 @@ export interface VisualizerFrame {
 }
 
 export type VisualizerStyle = "bars" | "scope" | "cassette";
+
+export interface SmartPlaylistRule {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+export interface SmartPlaylistRecord {
+  id: number;
+  name: string;
+  match_mode: string;
+  rules: SmartPlaylistRule[];
+  created_at: number;
+}
+
+export interface CollectionRecord {
+  id: number;
+  name: string;
+  description: string;
+  track_count: number;
+  created_at: number;
+}
+
+export interface DuplicateGroup {
+  canonical_key: string;
+  display_title: string;
+  display_artist: string;
+  tracks: TrackRecord[];
+}
+
+export interface TrackIdentityLink {
+  track_a_id: number;
+  track_b_id: number;
+  track_a_title: string;
+  track_a_source: string;
+  track_b_title: string;
+  track_b_source: string;
+  confidence: number;
+  match_reason: string;
+  status: string;
+}
+
+export interface SearchFilters {
+  query: string;
+  source?: string;
+  genre?: string;
+  artist?: string;
+  min_duration_sec?: number;
+  max_duration_sec?: number;
+  favorites_only?: boolean;
+}

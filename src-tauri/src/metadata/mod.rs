@@ -1,3 +1,5 @@
+pub mod identity;
+
 use std::fs;
 use std::path::Path;
 use std::time::UNIX_EPOCH;

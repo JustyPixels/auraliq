@@ -83,11 +83,11 @@ impl SpectrumAnalyzer {
             let start_bin = ((max_bin as f32).powf(t0) as usize).clamp(1, max_bin);
             let end_bin = ((max_bin as f32).powf(t1) as usize).clamp(start_bin + 1, max_bin + 1);
 
-            let mut sum = 0.0f32;
+            let sum: f32 = self.spectrum[start_bin..end_bin]
+                .iter()
+                .map(|c| c.norm())
+                .sum();
             let count = (end_bin - start_bin).max(1) as f32;
-            for bin in start_bin..end_bin {
-                sum += self.spectrum[bin].norm();
-            }
             let avg_mag = sum / count;
             let normalized = ((avg_mag / (FFT_SIZE as f32 * 0.12)).ln_1p() / 2.2).clamp(0.0, 1.0);
             bars.push(normalized);

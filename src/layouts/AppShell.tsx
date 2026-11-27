@@ -6,12 +6,12 @@ import { PlaybackToast } from "../components/PlaybackToast";
 import { ShortcutsModal } from "../components/ShortcutsModal";
 import { useAppInfo } from "../hooks/useAppInfo";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { DiscoverPage } from "../pages/DiscoverPage";
 import { DownloadsPage } from "../pages/DownloadsPage";
 import { HomePage } from "../pages/HomePage";
 import { LibraryShellPage, type LibraryTabId } from "../pages/LibraryShellPage";
 import { PlaylistsPage } from "../pages/PlaylistsPage";
 import { SearchPage } from "../pages/SearchPage";
-import { SectionPlaceholderPage } from "../pages/SectionPlaceholderPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { useLayoutStore } from "../stores/useLayoutStore";
 import { useThemeStore } from "../stores/useThemeStore";
@@ -127,7 +127,7 @@ export function AppShell() {
             {activeSection === "playlists" && <PlaylistsPage />}
             {activeSection === "downloads" && <DownloadsPage />}
             {activeSection === "settings" && <SettingsPage appInfo={info} runtimeStatus={status} />}
-            {activeSection === "discover" && <SectionPlaceholderPage item={currentNav} />}
+            {activeSection === "discover" && <DiscoverPage />}
           </main>
         </div>
 

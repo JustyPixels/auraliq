@@ -7,9 +7,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use rusqlite::{params, Connection, OptionalExtension, Row};
 
 use crate::error::AppError;
+use crate::metadata::identity::{
+    evaluate_smart_playlist, find_duplicate_groups, suggest_identity_links,
+};
 use models::{
-    AlbumSummary, ArtistSummary, GenreSummary, LibraryFolder, NewTrackData, PlaybackStateRecord,
-    PlaylistRecord, TrackRecord,
+    AlbumSummary, ArtistSummary, CollectionRecord, DuplicateGroup, GenreSummary, LibraryFolder,
+    NewTrackData, PlaybackStateRecord, PlaylistRecord, SearchFilters, SmartPlaylistRecord,
+    SmartPlaylistRule, TrackIdentityLink, TrackRecord,
 };
 
 pub struct Database {
@@ -592,6 +596,264 @@ impl Database {
         )?;
         Ok(())
     }
+
+    pub fn search_tracks_filtered(
+        &self,
+        filters: &SearchFilters,
+    ) -> Result<Vec<TrackRecord>, AppError> {
+        let base = if filters.query.trim().is_empty() {
+            self.list_tracks(false, Some("title"))?
+        } else {
+            self.search_tracks(&filters.query)?
+        };
+
+        let filtered = base
+            .into_iter()
+            .filter(|t| {
+                if let Some(ref src) = filters.source {
+                    if !src.is_empty()
+                        && src != "all"
+                        && !t.source_provider.eq_ignore_ascii_case(src)
+                    {
+                        return false;
+                    }
+                }
+                if let Some(ref genre) = filters.genre {
+                    if !genre.is_empty() && !t.genre.eq_ignore_ascii_case(genre) {
+                        return false;
+                    }
+                }
+                if let Some(ref artist) = filters.artist {
+                    if !artist.is_empty()
+                        && !t
+                            .artist
+                            .to_ascii_lowercase()
+                            .contains(&artist.to_ascii_lowercase())
+                    {
+                        return false;
+                    }
+                }
+                let secs = t.duration_ms / 1000;
+                if let Some(min_s) = filters.min_duration_sec {
+                    if secs < min_s {
+                        return false;
+                    }
+                }
+                if let Some(max_s) = filters.max_duration_sec {
+                    if secs > max_s {
+                        return false;
+                    }
+                }
+                if filters.favorites_only.unwrap_or(false) && !t.is_favorite {
+                    return false;
+                }
+                true
+            })
+            .collect();
+
+        Ok(filtered)
+    }
+
+    pub fn list_smart_playlists(&self) -> Result<Vec<SmartPlaylistRecord>, AppError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, match_mode, rules_json, created_at FROM smart_playlists ORDER BY id ASC",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let raw_rules: String = row.get(3)?;
+            let rules: Vec<SmartPlaylistRule> =
+                serde_json::from_str(&raw_rules).unwrap_or_default();
+            Ok(SmartPlaylistRecord {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                match_mode: row.get(2)?,
+                rules,
+                created_at: row.get(4)?,
+            })
+        })?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
+
+    pub fn create_smart_playlist(
+        &self,
+        name: &str,
+        match_mode: &str,
+        rules: &[SmartPlaylistRule],
+    ) -> Result<SmartPlaylistRecord, AppError> {
+        let now = now_unix_secs();
+        let mode = if match_mode == "any" { "any" } else { "all" };
+        let rules_json =
+            serde_json::to_string(rules).map_err(|e| AppError::Internal(e.to_string()))?;
+        self.conn.execute(
+            "INSERT INTO smart_playlists (name, match_mode, rules_json, created_at) VALUES (?1, ?2, ?3, ?4)",
+            params![name.trim(), mode, rules_json, now],
+        )?;
+        Ok(SmartPlaylistRecord {
+            id: self.conn.last_insert_rowid(),
+            name: name.trim().to_string(),
+            match_mode: mode.to_string(),
+            rules: rules.to_vec(),
+            created_at: now,
+        })
+    }
+
+    pub fn delete_smart_playlist(&self, smart_id: i64) -> Result<(), AppError> {
+        self.conn.execute(
+            "DELETE FROM smart_playlists WHERE id = ?1",
+            params![smart_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_smart_playlist_tracks(&self, smart_id: i64) -> Result<Vec<TrackRecord>, AppError> {
+        let (match_mode, raw_rules): (String, String) = self
+            .conn
+            .query_row(
+                "SELECT match_mode, rules_json FROM smart_playlists WHERE id = ?1",
+                params![smart_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?
+            .ok_or_else(|| AppError::NotFound(format!("smart playlist {smart_id}")))?;
+        let rules: Vec<SmartPlaylistRule> = serde_json::from_str(&raw_rules).unwrap_or_default();
+        let all_tracks = self.list_tracks(false, Some("title"))?;
+        Ok(evaluate_smart_playlist(&all_tracks, &rules, &match_mode))
+    }
+
+    pub fn list_collections(&self) -> Result<Vec<CollectionRecord>, AppError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT c.id, c.name, c.description, COUNT(ct.track_id), c.created_at
+             FROM collections c
+             LEFT JOIN collection_tracks ct ON c.id = ct.collection_id
+             GROUP BY c.id
+             ORDER BY c.created_at DESC, c.id DESC",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(CollectionRecord {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                track_count: row.get(3)?,
+                created_at: row.get(4)?,
+            })
+        })?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
+
+    pub fn create_collection(
+        &self,
+        name: &str,
+        description: &str,
+    ) -> Result<CollectionRecord, AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "INSERT INTO collections (name, description, created_at) VALUES (?1, ?2, ?3)",
+            params![name.trim(), description.trim(), now],
+        )?;
+        Ok(CollectionRecord {
+            id: self.conn.last_insert_rowid(),
+            name: name.trim().to_string(),
+            description: description.trim().to_string(),
+            track_count: 0,
+            created_at: now,
+        })
+    }
+
+    pub fn delete_collection(&self, collection_id: i64) -> Result<(), AppError> {
+        self.conn.execute(
+            "DELETE FROM collections WHERE id = ?1",
+            params![collection_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_collection_tracks(&self, collection_id: i64) -> Result<Vec<TrackRecord>, AppError> {
+        let sql = "SELECT t.id, t.source_provider, t.file_path, t.title, t.artist, t.album, t.album_artist, t.genre,
+                    t.duration_ms, t.track_number, t.disc_number, t.release_year, t.format, t.bitrate_kbps,
+                    t.sample_rate_hz, t.artwork_path, t.file_size, t.modified_at, t.is_missing, t.play_count,
+                    t.last_played_at, t.is_favorite, t.added_at
+             FROM tracks t
+             JOIN collection_tracks ct ON t.id = ct.track_id
+             WHERE ct.collection_id = ?1
+             ORDER BY ct.added_at DESC";
+        let mut stmt = self.conn.prepare(sql)?;
+        let rows = stmt.query_map(params![collection_id], row_to_track)?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
+
+    pub fn add_track_to_collection(
+        &self,
+        collection_id: i64,
+        track_id: i64,
+    ) -> Result<(), AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "INSERT OR IGNORE INTO collection_tracks (collection_id, track_id, added_at) VALUES (?1, ?2, ?3)",
+            params![collection_id, track_id, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_track_from_collection(
+        &self,
+        collection_id: i64,
+        track_id: i64,
+    ) -> Result<(), AppError> {
+        self.conn.execute(
+            "DELETE FROM collection_tracks WHERE collection_id = ?1 AND track_id = ?2",
+            params![collection_id, track_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn find_duplicate_tracks(&self) -> Result<Vec<DuplicateGroup>, AppError> {
+        let tracks = self.list_tracks(false, Some("title"))?;
+        Ok(find_duplicate_groups(&tracks))
+    }
+
+    pub fn list_identity_links(&self) -> Result<Vec<TrackIdentityLink>, AppError> {
+        let tracks = self.list_tracks(false, Some("title"))?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT track_a_id, track_b_id, status FROM track_identity_links")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                (row.get::<_, i64>(0)?, row.get::<_, i64>(1)?),
+                row.get::<_, String>(2)?,
+            ))
+        })?;
+        let mut statuses = std::collections::HashMap::new();
+        for row in rows {
+            let (pair, status) = row?;
+            statuses.insert(pair, status);
+        }
+        Ok(suggest_identity_links(&tracks, &statuses))
+    }
+
+    pub fn set_identity_link_status(
+        &self,
+        track_a_id: i64,
+        track_b_id: i64,
+        status: &str,
+    ) -> Result<(), AppError> {
+        let (a, b) = if track_a_id < track_b_id {
+            (track_a_id, track_b_id)
+        } else {
+            (track_b_id, track_a_id)
+        };
+        let clean_status = if status == "confirmed" {
+            "confirmed"
+        } else {
+            "dismissed"
+        };
+        let now = now_unix_secs();
+        self.conn.execute(
+            "INSERT INTO track_identity_links (track_a_id, track_b_id, status, updated_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(track_a_id, track_b_id) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at",
+            params![a, b, clean_status, now],
+        )?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -670,5 +932,39 @@ mod tests {
 
         db.remove_folder(folder.id).unwrap();
         assert_eq!(db.list_folders().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn migration_v2_smart_playlists_collections_and_identity_links() {
+        let db = Database::open_in_memory().unwrap();
+        let smart = db.list_smart_playlists().unwrap();
+        assert!(smart.len() >= 3);
+
+        db.upsert_track(&sample_track("E:\\Music\\a.flac", "Neon Horizon"))
+            .unwrap();
+        db.upsert_track(&sample_track("E:\\Music\\b.mp3", "Neon Horizon"))
+            .unwrap();
+
+        let filtered = db
+            .search_tracks_filtered(&SearchFilters {
+                query: "Neon".into(),
+                source: Some("local".into()),
+                genre: Some("Synthwave".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(filtered.len(), 2);
+
+        let col = db.create_collection("Night Drive", "Favs").unwrap();
+        db.add_track_to_collection(col.id, filtered[0].id).unwrap();
+        assert_eq!(db.get_collection_tracks(col.id).unwrap().len(), 1);
+
+        let dups = db.find_duplicate_tracks().unwrap();
+        assert_eq!(dups.len(), 1);
+
+        db.set_identity_link_status(filtered[0].id, filtered[1].id, "confirmed")
+            .unwrap();
+        let links = db.list_identity_links().unwrap();
+        assert_eq!(links[0].status, "confirmed");
     }
 }
