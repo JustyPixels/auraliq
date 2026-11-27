@@ -1,3 +1,7 @@
+pub mod library;
+pub mod player;
+pub mod playlists;
+
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]

@@ -1,0 +1,123 @@
+use rusqlite::Connection;
+
+use crate::error::AppError;
+
+const MIGRATION_V1: &str = r#"
+CREATE TABLE IF NOT EXISTS library_folders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    path TEXT NOT NULL UNIQUE,
+    added_at INTEGER NOT NULL,
+    last_scanned_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS tracks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_provider TEXT NOT NULL DEFAULT 'local',
+    file_path TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    album TEXT NOT NULL,
+    album_artist TEXT NOT NULL,
+    genre TEXT NOT NULL,
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    track_number INTEGER,
+    disc_number INTEGER,
+    release_year INTEGER,
+    format TEXT NOT NULL,
+    bitrate_kbps INTEGER,
+    sample_rate_hz INTEGER,
+    artwork_path TEXT,
+    file_size INTEGER NOT NULL DEFAULT 0,
+    modified_at INTEGER NOT NULL DEFAULT 0,
+    is_missing INTEGER NOT NULL DEFAULT 0,
+    play_count INTEGER NOT NULL DEFAULT 0,
+    last_played_at INTEGER,
+    is_favorite INTEGER NOT NULL DEFAULT 0,
+    added_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist);
+CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album);
+CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
+CREATE INDEX IF NOT EXISTS idx_tracks_favorite ON tracks(is_favorite);
+CREATE INDEX IF NOT EXISTS idx_tracks_last_played ON tracks(last_played_at);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS tracks_fts USING fts5(
+    title,
+    artist,
+    album,
+    genre,
+    content='tracks',
+    content_rowid='id'
+);
+
+CREATE TRIGGER IF NOT EXISTS tracks_ai AFTER INSERT ON tracks BEGIN
+    INSERT INTO tracks_fts(rowid, title, artist, album, genre)
+    VALUES (new.id, new.title, new.artist, new.album, new.genre);
+END;
+
+CREATE TRIGGER IF NOT EXISTS tracks_ad AFTER DELETE ON tracks BEGIN
+    INSERT INTO tracks_fts(tracks_fts, rowid, title, artist, album, genre)
+    VALUES ('delete', old.id, old.title, old.artist, old.album, old.genre);
+END;
+
+CREATE TRIGGER IF NOT EXISTS tracks_au AFTER UPDATE ON tracks BEGIN
+    INSERT INTO tracks_fts(tracks_fts, rowid, title, artist, album, genre)
+    VALUES ('delete', old.id, old.title, old.artist, old.album, old.genre);
+    INSERT INTO tracks_fts(rowid, title, artist, album, genre)
+    VALUES (new.id, new.title, new.artist, new.album, new.genre);
+END;
+
+CREATE TABLE IF NOT EXISTS playlists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS playlist_tracks (
+    playlist_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    added_at INTEGER NOT NULL,
+    PRIMARY KEY (playlist_id, track_id),
+    FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+    FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS playback_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    track_id INTEGER NOT NULL,
+    played_at INTEGER NOT NULL,
+    FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS playback_state (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    current_track_id INTEGER,
+    position_ms INTEGER NOT NULL DEFAULT 0,
+    volume REAL NOT NULL DEFAULT 0.8,
+    muted INTEGER NOT NULL DEFAULT 0,
+    shuffle INTEGER NOT NULL DEFAULT 0,
+    repeat_mode TEXT NOT NULL DEFAULT 'off',
+    queue_track_ids TEXT NOT NULL DEFAULT '[]',
+    queue_index INTEGER NOT NULL DEFAULT -1
+);
+
+INSERT OR IGNORE INTO playback_state (id) VALUES (1);
+"#;
+
+pub fn apply_migrations(conn: &Connection) -> Result<(), AppError> {
+    conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;")?;
+    let current_version: i64 = conn.query_row("PRAGMA user_version;", [], |row| row.get(0))?;
+
+    if current_version < 1 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(MIGRATION_V1)?;
+        tx.pragma_update(None, "user_version", 1i64)?;
+        tx.commit()?;
+    }
+
+    Ok(())
+}

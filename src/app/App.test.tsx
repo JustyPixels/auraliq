@@ -2,23 +2,31 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { useLayoutStore } from "../stores/useLayoutStore";
+import { usePlayerStore } from "../stores/usePlayerStore";
 import { useShortcutsStore } from "../stores/useShortcutsStore";
 import { App } from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
+  convertFileSrc: vi.fn((p: string) => p),
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  open: vi.fn(),
+  save: vi.fn(),
 }));
 
 describe("App", () => {
-  afterEach(() => {
+  afterEach(async () => {
     delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
     localStorage.clear();
     useLayoutStore.getState().resetLayout();
     useShortcutsStore.getState().resetShortcuts();
+    await usePlayerStore.getState().clearQueue();
     vi.clearAllMocks();
   });
 
-  it("renders shell, sidebar, home hero, and disabled Milestone 4 player controls", () => {
+  it("renders shell, sidebar, home hero, and disabled Play when no track is loaded", () => {
     render(<App />);
 
     expect(screen.getByRole("navigation")).toBeInTheDocument();
@@ -27,7 +35,7 @@ describe("App", () => {
 
     const playButton = screen.getByRole("button", { name: "Play" });
     expect(playButton).toBeDisabled();
-    expect(playButton).toHaveAttribute("title", "Audio engine scheduled for Milestone 4");
+    expect(playButton).toHaveAttribute("title", "Select a track from your library to play");
   });
 
   it("navigates to Search, Playlists, Downloads, and Settings tabs", () => {
@@ -69,20 +77,33 @@ describe("App", () => {
     expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
   });
 
-  it("switches themes and updates document attributes", () => {
+  it("switches themes from Settings and updates document attributes", () => {
     render(<App />);
 
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     fireEvent.click(screen.getByRole("radio", { name: /Analog Amber/i }));
     expect(document.documentElement.dataset.theme).toBe("analog-amber");
   });
 
-  it("loads app info over Tauri IPC when running in Tauri", async () => {
+  it("loads app info and hydrates library over Tauri IPC when running in Tauri", async () => {
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
-    vi.mocked(invoke).mockResolvedValueOnce({
-      name: "Auraliq",
-      version: "0.1.0",
-      platform: "windows",
-      arch: "x86_64",
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === "get_app_info") {
+        return { name: "Auraliq", version: "0.2.0", platform: "windows", arch: "x86_64" };
+      }
+      if (cmd === "load_playback_state") {
+        return {
+          current_track_id: null,
+          position_ms: 0,
+          volume: 0.8,
+          muted: false,
+          shuffle: false,
+          repeat_mode: "off",
+          queue_track_ids: [],
+          queue_index: -1,
+        };
+      }
+      return [];
     });
 
     render(<App />);

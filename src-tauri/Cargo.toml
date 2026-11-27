@@ -1,6 +1,6 @@
 [package]
 name = "auraliq"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 description = "Retro-inspired unified music hub"
@@ -13,7 +13,17 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+rusqlite = { version = "0.35", features = ["bundled"] }
+symphonia = { version = "0.5.5", features = ["all"] }
+cpal = "0.15.3"
+lofty = "0.25.5"
+walkdir = "2.5.1"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"

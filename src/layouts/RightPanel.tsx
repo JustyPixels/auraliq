@@ -1,6 +1,9 @@
-import { AudioLines, Info, ListOrdered, X } from "lucide-react";
+import { AudioLines, Info, ListOrdered, Play, Trash2, X } from "lucide-react";
+import { formatDurationMs } from "../api/backend";
+import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
+import { usePlayerStore } from "../stores/usePlayerStore";
 
 export type RightPanelTab = "queue" | "info" | "visualizer";
 
@@ -11,6 +14,9 @@ interface RightPanelProps {
 }
 
 export function RightPanel({ activeTab, onSelectTab, onClose }: RightPanelProps) {
+  const { queue, queueIndex, currentTrack, playQueueIndex, removeFromQueue, clearQueue } =
+    usePlayerStore();
+
   return (
     <aside className="aq-right-panel" aria-label="Context panel">
       <header className="aq-right-panel__header">
@@ -59,27 +65,97 @@ export function RightPanel({ activeTab, onSelectTab, onClose }: RightPanelProps)
       </header>
 
       <div className="aq-right-panel__body">
-        {activeTab === "queue" && (
-          <EmptyState
-            icon={<ListOrdered size={20} />}
-            title="Playback Queue Empty"
-            description="Queue management activates once the Rust audio engine lands."
-            milestoneTag="Milestone 4 / 5"
-          />
-        )}
-        {activeTab === "info" && (
-          <EmptyState
-            icon={<Info size={20} />}
-            title="No Track Selected"
-            description="Track metadata, audio format, bitrate, and source capabilities will appear here."
-            milestoneTag="Milestone 4"
-          />
-        )}
+        {activeTab === "queue" &&
+          (queue.length === 0 ? (
+            <EmptyState
+              icon={<ListOrdered size={20} />}
+              title="Playback Queue Empty"
+              description="Play a track or add items from your library to build the queue."
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <div className="aq-row-wrap" style={{ justifyContent: "space-between" }}>
+                <Badge>{queue.length} queued</Badge>
+                <Button size="sm" variant="ghost" onClick={() => void clearQueue()}>
+                  <Trash2 size={13} />
+                  Clear
+                </Button>
+              </div>
+              {queue.map((track, idx) => (
+                <div
+                  key={`${track.id}-${idx}`}
+                  className="aq-list-row"
+                  style={idx === queueIndex ? { borderColor: "var(--aq-accent)" } : undefined}
+                >
+                  <button
+                    type="button"
+                    className="aq-btn aq-btn--ghost aq-truncate"
+                    style={{ flex: 1, justifyContent: "flex-start", padding: "0.2rem" }}
+                    onClick={() => void playQueueIndex(idx)}
+                  >
+                    <Play size={12} />
+                    <span className="aq-truncate">{track.title}</span>
+                  </button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Remove ${track.title} from queue`}
+                    onClick={() => removeFromQueue(idx)}
+                  >
+                    <X size={13} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ))}
+
+        {activeTab === "info" &&
+          (currentTrack ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+              <div className="aq-kv-item">
+                <span className="aq-kv-label">Title</span>
+                <span className="aq-kv-val">{currentTrack.title}</span>
+              </div>
+              <div className="aq-kv-item">
+                <span className="aq-kv-label">Artist / Album</span>
+                <span className="aq-kv-val">
+                  {currentTrack.artist} — {currentTrack.album}
+                </span>
+              </div>
+              <div className="aq-kv-item">
+                <span className="aq-kv-label">Format</span>
+                <span className="aq-kv-val">
+                  {currentTrack.format.toUpperCase()} •{" "}
+                  {currentTrack.sample_rate_hz ? `${currentTrack.sample_rate_hz} Hz` : "N/A"} •{" "}
+                  {currentTrack.bitrate_kbps ? `${currentTrack.bitrate_kbps} kbps` : "Lossless"}
+                </span>
+              </div>
+              <div className="aq-kv-item">
+                <span className="aq-kv-label">Duration / Plays</span>
+                <span className="aq-kv-val">
+                  {formatDurationMs(currentTrack.duration_ms)} • {currentTrack.play_count} plays
+                </span>
+              </div>
+              <div className="aq-kv-item">
+                <span className="aq-kv-label">File Path</span>
+                <span className="aq-kv-val" style={{ wordBreak: "break-all", fontSize: "0.74rem" }}>
+                  {currentTrack.file_path}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Info size={20} />}
+              title="No Track Selected"
+              description="Play a track to inspect its audio format, bitrate, sample rate, and file path."
+            />
+          ))}
+
         {activeTab === "visualizer" && (
           <EmptyState
             icon={<AudioLines size={20} />}
             title="Visualizer Standby"
-            description="Real-time FFT spectrum and CRT oscilloscope render here during active playback."
+            description="Real-time FFT spectrum and CRT oscilloscope render here in Milestone 5."
             milestoneTag="Milestone 5"
           />
         )}

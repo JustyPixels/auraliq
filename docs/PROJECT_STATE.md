@@ -3,27 +3,25 @@
 > **Read this file first before starting any new work session.**
 
 ## Current Status
-- **Current Milestone**: Milestone 3 — Core Application Shell (**COMPLETED**)
-- **Next Milestone**: Milestone 4 — Local Music Engine (`0.2.0`)
-- **Current Version**: `0.1.0`
+- **Current Milestone**: Milestone 4 — Local Music Engine (**COMPLETED**)
+- **Next Milestone**: Milestone 5 — Player & Audio Experience (`0.3.0`)
+- **Current Version**: `0.2.0`
 - **Repository Status**: `https://github.com/JustyPixels/auraliq` (`main`)
 
 ## What Is Completed
-- **Milestone 0**: Research report, architecture proposal, provider matrix, dependency analysis, compliance rules, ADRs, roadmap.
-- **Milestone 1**: Tauri v2 (`2.12.7`) + Rust (`1.96.0`, `x86_64-pc-windows-msvc`) + React 19 + TS + Vite (`pnpm`), CI workflow, governance docs.
-- **Milestone 2**: Brand assets (`branding/`), Tauri icons, `--aq-*` retro tokens, 5 built-in themes, UI primitives, `AppShell`.
-- **Milestone 3**:
-  - `useLayoutStore` (`auraliq.layout.v1`): persistent sidebar width (180–340px), collapse state, section order, pin/hide (Home & Settings locked), right panel state, default landing page, UI density (`comfortable` / `compact`), layout reset
-  - `useShortcutsStore` (`auraliq.shortcuts.v1`) + `useKeyboardShortcuts` + `ShortcutsModal` (`?` help dialog, `Ctrl+K`, `Ctrl+B`, `Ctrl+,`, `Alt+1..4`, live rebinding)
-  - Resizable `Sidebar` with drag/keyboard handle & Pinned section
-  - Dedicated shell pages: `SearchPage`, `LibraryShellPage`, `PlaylistsPage`, `DownloadsPage`, tabbed `SettingsPage` (with `PROVIDER_CATALOG` capability cards)
+- **Milestones 0–3**: Research, Tauri v2 + React 19 foundation, brand assets, retro design system, 5 themes, persistent customizable shell & shortcuts.
+- **Milestone 4**:
+  - `src-tauri/src/database/`: SQLite (`rusqlite` bundled, WAL, FTS5) with migrations, folders, tracks, playlists, history, and playback state persistence.
+  - `src-tauri/src/metadata/` & `src-tauri/src/library/`: `walkdir` + `lofty` scanner, embedded/external artwork cache (`$APPLOCALDATA/artwork/`), missing-file detection, M3U/M3U8/PLS import/export.
+  - `src-tauri/src/audio/`: Thread-isolated `symphonia` + `cpal` + stereo resampler engine.
+  - Frontend wiring: `src/api/backend.ts`, `useLibraryStore`, `usePlayerStore`, live `PlayerBar`, `RightPanel` Queue/Info, `LibraryShellPage`, `PlaylistsPage`, `SearchPage`, `HomePage`.
 
 ## What Is Currently Working
-- Full Milestone 3 navigable desktop shell, persistent layout & shortcuts, theme & density switching, and Tauri IPC `get_app_info`.
+- Full offline local music scanning, FTS5 search, artwork display, playback, queue, playlists, and persistent state.
 - All frontend (`prettier`, `eslint`, `tsc`, `vitest`, `vite build`) and Rust (`rustfmt`, `clippy`, `cargo test`) checks pass.
 
 ## What Is Currently Being Developed
-- Nothing actively in flight; ready to begin Milestone 4.
+- Nothing actively in flight; ready to begin Milestone 5.
 
 ## Outstanding Issues & Environment Notes
 1. **Windows Rust Toolchain**: Local `rustup override set stable-x86_64-pc-windows-msvc` is active; always prepend `$env:USERPROFILE\.cargo\bin` to `PATH` before running `cargo` / `rustc` / `pnpm tauri`.
@@ -36,11 +34,11 @@
 - See [TECHNICAL_DECISIONS.md](architecture/TECHNICAL_DECISIONS.md) (ADR-001 through ADR-012).
 
 ## Next Concrete Task
-Execute **Milestone 4 — Local Music Engine (`0.2.0`)**:
-1. Add Rust backend dependencies (`symphonia`, `cpal`, `rubato`, `lofty`, `walkdir`, `rusqlite` with `bundled` + `fts5`, `tokio`).
-2. Implement SQLite schema, WAL mode, FTS5, and numbered migrations (`src-tauri/src/database/`).
-3. Implement background folder scanning & `lofty` metadata/artwork extraction (`src-tauri/src/library/`, `src-tauri/src/metadata/`).
-4. Implement `symphonia` + `cpal` + `rubato` audio playback engine (`src-tauri/src/audio/`) and wire Library/Playlists/PlayerBar in the frontend.
+Execute **Milestone 5 — Player & Audio Experience (`0.3.0`)**:
+1. Integrate Windows SMTC & hardware media keys (`souvlaki`).
+2. Implement audio output device enumeration and selection (`cpal`).
+3. Implement FFT tap (`realfft`) and Canvas audio visualizer foundation (`Scope` tab).
+4. Add playback notifications and enhanced audio device error recovery.
 
 ## Relevant Commands
 ```powershell

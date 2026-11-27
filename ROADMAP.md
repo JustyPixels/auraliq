@@ -46,14 +46,14 @@
 
 ---
 
-## Milestone 4 — Local Music Engine (`0.2.0`)
+## Milestone 4 — Local Music Engine (`0.2.0`) [COMPLETED]
 
-- [ ] Implement Rust audio engine (`symphonia` + `cpal` + `rubato`)
-- [ ] Implement local folder management and background `walkdir` + `lofty` scanner
-- [ ] Extract embedded & external album artwork with local thumbnail cache
-- [ ] Build SQLite schema + FTS5 search + migrations
-- [ ] Implement Track, Album, Artist, Genre browsing, Favorites, Recently Played, Play Counts
-- [ ] Implement local playback, queue, playlists, M3U/M3U8/PLS import/export, and playback state persistence
+- [x] Implement Rust audio engine (`symphonia` + `cpal` + stereo resampler)
+- [x] Implement local folder management and background `walkdir` + `lofty` scanner
+- [x] Extract embedded & external album artwork with local thumbnail cache
+- [x] Build SQLite schema + FTS5 search + migrations
+- [x] Implement Track, Album, Artist, Genre browsing, Favorites, Recently Played, Play Counts
+- [x] Implement local playback, queue, playlists, M3U/M3U8/PLS import/export, and playback state persistence
 
 ---
 

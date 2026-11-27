@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.1.0 — Milestone 3](https://img.shields.io/badge/Status-v0.1.0%20Milestone%203-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.2.0 — Milestone 4](https://img.shields.io/badge/Status-v0.2.0%20Milestone%204-4c1d95.svg)](ROADMAP.md)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
 
@@ -24,20 +24,17 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.1.0 — Milestone 3 Core Application Shell)
+### Available (v0.2.0 — Milestone 4 Local Music Engine)
 
-- Tauri v2 + Rust (`x86_64-pc-windows-msvc`) + React 19 + TypeScript desktop shell
-- Typed Tauri IPC bridge (`get_app_info`) with graceful browser preview fallback
-- Brand identity assets (`branding/`), custom app icons, and retro `--aq-*` design tokens
-- 5 built-in themes (`Midnight Cassette`, `CRT Purple`, `Analog Amber`, `Retro Terminal`, `Classic Gray`), Reduced Motion, and UI Density (`Comfortable` / `Compact`)
-- Persistent, resizable, customizable sidebar (pin, hide, reorder, collapse, default landing page, layout reset)
-- Dedicated shell pages (Home, Search with source filters & history, Library tabs, Playlists, Downloads/Cache, tabbed Settings with Provider capability cards)
-- Customizable keyboard shortcuts (`Ctrl+K`, `Ctrl+B`, `Ctrl+,`, `Alt+1..4`, `?` help modal)
-- Strict Tauri capabilities, restrictive CSP, and automated CI checks
+- Dedicated-thread Rust audio engine (`symphonia` + `cpal` + stereo resampler) supporting MP3, FLAC, WAV, AAC/M4A, OGG/Vorbis, Opus, and ALAC
+- Recursive local folder scanning (`walkdir`) with `lofty` metadata extraction and cached embedded/external album artwork
+- SQLite (`rusqlite` + WAL + FTS5) library storage with Track, Artist, Album, Favorites, Recently Played, Play Counts, and missing-file detection
+- Local playlists with M3U, M3U8, and PLS import/export plus persistent queue & playback state
+- 5 built-in retro themes, UI density, resizable/customizable sidebar, and rebindable keyboard shortcuts
 
 ### In Development
 
-- Local audio engine (`symphonia` + `cpal` + `rubato`) & SQLite/FTS5 library scanner (Milestone 4)
+- Windows SMTC / media keys, audio output device selection, and Canvas FFT visualizers (Milestone 5)
 
 ### Planned
 
@@ -64,7 +61,7 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 | Source                  | Search            | Playback            | Download            | Offline             | Status              |
 | ----------------------- | ----------------- | ------------------- | ------------------- | ------------------- | ------------------- |
-| Local Library           | Planned (M4)      | Planned (M4)        | N/A                 | Planned (M4)        | Tier 1 — MVP Core   |
+| Local Library           | Yes (FTS5)        | Yes (Symphonia)     | N/A                 | Yes                 | **Supported (M4)**  |
 | Internet Archive        | Planned (M8)      | Planned (M8)        | Planned (M8)        | Planned (M9)        | Tier 2 — MVP Online |
 | Radio Browser           | Planned (M8)      | Planned (M8)        | No (Live Radio)     | No                  | Tier 2 — MVP Online |
 | Direct Audio URLs / RSS | N/A               | Planned (M8)        | Conditional         | Conditional         | Tier 2 — MVP Online |

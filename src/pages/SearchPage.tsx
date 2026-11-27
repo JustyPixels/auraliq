@@ -1,8 +1,12 @@
-import { Search, Trash2 } from "lucide-react";
+import { Play, Search, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { backendApi, formatDurationMs, isTauriRuntime } from "../api/backend";
+import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { Panel } from "../components/Panel";
+import { usePlayerStore } from "../stores/usePlayerStore";
+import type { TrackRecord } from "../types/music";
 
 type SourceFilter = "all" | "local" | "internet_archive" | "radio_browser";
 
@@ -28,11 +32,30 @@ export function SearchPage() {
   const [query, setQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [history, setHistory] = useState<string[]>(loadHistory);
+  const [results, setResults] = useState<TrackRecord[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const playTrackList = usePlayerStore((state) => state.playTrackList);
+  const inTauri = isTauriRuntime();
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!inTauri || (sourceFilter !== "all" && sourceFilter !== "local")) {
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    void backendApi.searchTracks(query).then((hits) => {
+      if (!cancelled) {
+        setResults(hits);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [inTauri, query, sourceFilter]);
 
   const saveSearch = (term: string) => {
     const clean = term.trim();
@@ -74,7 +97,7 @@ export function SearchPage() {
               type="search"
               className="aq-input"
               style={{ flex: 1, minWidth: "220px" }}
-              placeholder="Search tracks, albums, artists, or stations..."
+              placeholder="Search local tracks, albums, artists, or genres..."
               aria-label="Search music"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -122,13 +145,56 @@ export function SearchPage() {
         </Panel>
       )}
 
-      <Panel title="Results">
-        <EmptyState
-          icon={<Search size={20} />}
-          title={query.trim() ? `No indexed results for "${query.trim()}"` : "Search Ready"}
-          description="Local SQLite FTS5 indexing unlocks in Milestone 4, and online provider search (Internet Archive, Radio Browser) unlocks in Milestone 8. Results will always display explicit source badges."
-          milestoneTag="Milestone 4 / 8"
-        />
+      <Panel title="Results" badge={<Badge>{results.length}</Badge>}>
+        {results.length > 0 ? (
+          <div className="aq-track-list">
+            {results.map((track, idx) => (
+              <div key={track.id} className="aq-track-row">
+                <Button
+                  size="icon"
+                  variant="primary"
+                  aria-label={`Play ${track.title}`}
+                  onClick={() => void playTrackList(results, idx)}
+                >
+                  <Play size={14} />
+                </Button>
+                <div className="aq-truncate">
+                  <strong>{track.title}</strong>
+                  <div style={{ fontSize: "0.76rem", color: "var(--aq-muted)" }}>
+                    {track.artist}
+                  </div>
+                </div>
+                <div className="aq-truncate" style={{ color: "var(--aq-muted)" }}>
+                  {track.album}
+                </div>
+                <Badge tone="accent">LOCAL</Badge>
+                <span className="aq-timecode">{formatDurationMs(track.duration_ms)}</span>
+                <span />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Search size={20} />}
+            title={
+              sourceFilter === "internet_archive" || sourceFilter === "radio_browser"
+                ? "Online Provider Search Scheduled"
+                : query.trim()
+                  ? `No local results for "${query.trim()}"`
+                  : "Search Local FTS5 Index"
+            }
+            description={
+              sourceFilter === "internet_archive" || sourceFilter === "radio_browser"
+                ? "Online provider search (Internet Archive, Radio Browser) unlocks in Milestone 8."
+                : "Type to search your local SQLite FTS5 library by title, artist, album, or genre."
+            }
+            milestoneTag={
+              sourceFilter === "internet_archive" || sourceFilter === "radio_browser"
+                ? "Milestone 8"
+                : undefined
+            }
+          />
+        )}
       </Panel>
     </>
   );
