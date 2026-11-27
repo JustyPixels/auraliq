@@ -474,6 +474,7 @@ fn audio_worker_loop(
     let mut eq = EqualizerProcessor::new();
     let mut analyzer = SpectrumAnalyzer::new();
     let mut mono_ring: VecDeque<f32> = VecDeque::with_capacity(FFT_SIZE * 2);
+    let mut cmd_pending: Option<AudioCommand> = None;
 
     loop {
         if stream_error_flag.swap(false, Ordering::Relaxed) {
@@ -503,7 +504,7 @@ fn audio_worker_loop(
             }
         }
 
-        while let Ok(cmd) = rx.try_recv() {
+        while let Some(cmd) = cmd_pending.take().or_else(|| rx.try_recv().ok()) {
             match cmd {
                 AudioCommand::SelectOutputDevice { device_name } => {
                     preferred_device = device_name;
@@ -928,7 +929,16 @@ fn audio_worker_loop(
             }
         }
 
-        thread::sleep(Duration::from_millis(12));
+        if playing_flag.load(Ordering::Relaxed) {
+            thread::sleep(Duration::from_millis(12));
+        } else {
+            // Block on command channel while idle/paused to eliminate busy-polling CPU wakeups
+            if let Ok(cmd) = rx.recv_timeout(Duration::from_millis(150)) {
+                if cmd_pending.is_none() {
+                    cmd_pending = Some(cmd);
+                }
+            }
+        }
     }
 }
 

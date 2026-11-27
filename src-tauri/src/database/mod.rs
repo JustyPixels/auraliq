@@ -74,6 +74,23 @@ impl Database {
         Ok(Self { conn })
     }
 
+    pub fn with_batch_transaction<F, T>(&self, f: F) -> Result<T, AppError>
+    where
+        F: FnOnce(&Self) -> Result<T, AppError>,
+    {
+        self.conn.execute_batch("BEGIN IMMEDIATE;")?;
+        match f(self) {
+            Ok(val) => {
+                self.conn.execute_batch("COMMIT;")?;
+                Ok(val)
+            }
+            Err(err) => {
+                let _ = self.conn.execute_batch("ROLLBACK;");
+                Err(err)
+            }
+        }
+    }
+
     pub fn list_folders(&self) -> Result<Vec<LibraryFolder>, AppError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, path, added_at, last_scanned_at FROM library_folders ORDER BY added_at ASC",

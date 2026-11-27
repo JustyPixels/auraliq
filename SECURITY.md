@@ -4,7 +4,11 @@
 
 | Version | Supported                |
 | ------- | ------------------------ |
-| `0.1.x` | Yes (active development) |
+| `0.9.x` | Yes (active development) |
+
+## Security Audit
+
+See [docs/QA_SECURITY_AUDIT.md](docs/QA_SECURITY_AUDIT.md) for the Milestone 13 dependency, SSRF, CSP, and capability audit report.
 
 ## Reporting a Vulnerability
 

@@ -36,6 +36,12 @@ pub fn validate_remote_url(raw: &str, allow_http: bool) -> Result<Url, AppError>
         }
     }
 
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(AppError::Security(
+            "Embedded credentials in URLs are disallowed".to_string(),
+        ));
+    }
+
     let Some(host) = url.host() else {
         return Err(AppError::Security(
             "URL must include a valid host".to_string(),
@@ -45,7 +51,11 @@ pub fn validate_remote_url(raw: &str, allow_http: bool) -> Result<Url, AppError>
     match host {
         Host::Domain(domain) => {
             let lower = domain.to_ascii_lowercase();
-            if lower == "localhost" || lower.ends_with(".localhost") || lower.ends_with(".local") {
+            if lower == "localhost"
+                || lower.ends_with(".localhost")
+                || lower.ends_with(".local")
+                || lower.ends_with(".internal")
+            {
                 return Err(AppError::Security(format!("Blocked local host: {domain}")));
             }
         }
@@ -84,6 +94,11 @@ pub fn validate_remote_url(raw: &str, allow_http: bool) -> Result<Url, AppError>
     Ok(url)
 }
 
+const WINDOWS_RESERVED_NAMES: &[&str] = &[
+    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+    "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+];
+
 pub fn sanitize_filename(name: &str) -> Result<String, AppError> {
     let trimmed = name.trim();
     if trimmed.is_empty() || trimmed == "." || trimmed == ".." || trimmed.contains("..") {
@@ -102,11 +117,19 @@ pub fn sanitize_filename(name: &str) -> Result<String, AppError> {
             c => c,
         })
         .collect();
-    let final_name = cleaned.trim().to_string();
+    let mut final_name = cleaned.trim_end_matches([' ', '.']).trim().to_string();
     if final_name.is_empty() {
         return Err(AppError::Security(
             "Filename is empty after sanitization".to_string(),
         ));
+    }
+    let stem = final_name
+        .split('.')
+        .next()
+        .unwrap_or("")
+        .to_ascii_uppercase();
+    if WINDOWS_RESERVED_NAMES.contains(&stem.as_str()) {
+        final_name = format!("_{final_name}");
     }
     Ok(final_name)
 }
@@ -123,8 +146,12 @@ mod tests {
 
         assert!(validate_remote_url("file:///C:/Windows/win.ini", true).is_err());
         assert!(validate_remote_url("javascript:alert(1)", true).is_err());
+        assert!(validate_remote_url("https://user:pass@archive.org/test.mp3", false).is_err());
         assert!(validate_remote_url("http://localhost:8080/audio", true).is_err());
+        assert!(validate_remote_url("https://metadata.internal/latest", true).is_err());
         assert!(validate_remote_url("http://127.0.0.1/test.mp3", true).is_err());
+        assert!(validate_remote_url("https://[::ffff:127.0.0.1]/test.mp3", true).is_err());
+        assert!(validate_remote_url("https://100.64.0.1/test.mp3", true).is_err());
         assert!(validate_remote_url("https://192.168.1.10/stream", true).is_err());
         assert!(validate_remote_url("https://10.0.0.5/stream", true).is_err());
     }
@@ -135,6 +162,9 @@ mod tests {
             sanitize_filename("track: 01?.mp3").unwrap(),
             "track_ 01_.mp3"
         );
+        assert_eq!(sanitize_filename("CON.mp3").unwrap(), "_CON.mp3");
+        assert_eq!(sanitize_filename("nul").unwrap(), "_nul");
+        assert_eq!(sanitize_filename("song. ").unwrap(), "song");
         assert!(sanitize_filename("../evil.mp3").is_err());
         assert!(sanitize_filename("dir/file.mp3").is_err());
         assert!(sanitize_filename("").is_err());

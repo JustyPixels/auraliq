@@ -1,6 +1,6 @@
 {
   "name": "auraliq",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -39,6 +39,6 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.24.0",
     "vite": "^6.0.0",
-    "vitest": "^3.0.0"
+    "vitest": "^4.1.12"
   }
 }

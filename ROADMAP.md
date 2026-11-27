@@ -122,11 +122,11 @@
 
 ---
 
-## Milestone 13 — QA, Optimization & Security (`0.9.0`)
+## Milestone 13 — QA, Optimization & Security (`0.9.0`) [COMPLETED]
 
-- [ ] Full Rust, frontend, and integration test suite
-- [ ] Security & dependency audit (`cargo audit`, CSP, path/URL validation)
-- [ ] Performance profiling (idle CPU/RAM, scan speed, clean Windows VM install/upgrade/uninstall test)
+- [x] Full Rust, frontend, and integration test suite (`tests/integration_pipeline.rs` + `vitest`)
+- [x] Security & dependency audit (`cargo audit` 0 vulns, `pnpm audit` 0 vulns, CSP, SSRF/filename hardening)
+- [x] Performance optimization (idle audio thread sleep reduction, batched SQLite library scan, `--release` build verified; clean VM install check scheduled in M14)
 
 ---
 

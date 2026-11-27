@@ -27,49 +27,54 @@ pub fn scan_all_folders(db: &Database, artwork_dir: &Path) -> Result<ScanSummary
 
         let mut seen_paths = HashSet::new();
 
-        for entry in WalkDir::new(root).follow_links(false).into_iter().flatten() {
-            if !entry.file_type().is_file() {
-                continue;
-            }
-            let path = entry.path();
-            if !is_supported_audio_file(path) {
-                continue;
-            }
+        let folder_id = folder.id;
+        let folder_path = folder.path.clone();
+        db.with_batch_transaction(|batch_db| {
+            for entry in WalkDir::new(root).follow_links(false).into_iter().flatten() {
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+                let path = entry.path();
+                if !is_supported_audio_file(path) {
+                    continue;
+                }
 
-            summary.scanned_files += 1;
-            let path_str = path.to_string_lossy().into_owned();
-            seen_paths.insert(path_str.clone());
+                summary.scanned_files += 1;
+                let path_str = path.to_string_lossy().into_owned();
+                seen_paths.insert(path_str.clone());
 
-            if let Ok(meta) = fs::metadata(path) {
-                let file_size = meta.len() as i64;
-                let modified_at = meta
-                    .modified()
-                    .ok()
-                    .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-                    .map(|d| d.as_secs() as i64)
-                    .unwrap_or(0);
+                if let Ok(meta) = fs::metadata(path) {
+                    let file_size = meta.len() as i64;
+                    let modified_at = meta
+                        .modified()
+                        .ok()
+                        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                        .map(|d| d.as_secs() as i64)
+                        .unwrap_or(0);
 
-                if let Ok(Some((_, old_size, old_mod, is_missing))) =
-                    db.get_track_by_path_meta(&path_str)
-                {
-                    if !is_missing && old_size == file_size && old_mod == modified_at {
-                        continue;
+                    if let Ok(Some((_, old_size, old_mod, is_missing))) =
+                        batch_db.get_track_by_path_meta(&path_str)
+                    {
+                        if !is_missing && old_size == file_size && old_mod == modified_at {
+                            continue;
+                        }
                     }
+                }
+
+                match extract_metadata(path, artwork_dir) {
+                    Ok(track_data) => match batch_db.upsert_track(&track_data) {
+                        Ok(true) => summary.added += 1,
+                        Ok(false) => summary.updated += 1,
+                        Err(e) => summary.errors.push(format!("{path_str}: {e}")),
+                    },
+                    Err(e) => summary.errors.push(format!("{path_str}: {e}")),
                 }
             }
 
-            match extract_metadata(path, artwork_dir) {
-                Ok(track_data) => match db.upsert_track(&track_data) {
-                    Ok(true) => summary.added += 1,
-                    Ok(false) => summary.updated += 1,
-                    Err(e) => summary.errors.push(format!("{path_str}: {e}")),
-                },
-                Err(e) => summary.errors.push(format!("{path_str}: {e}")),
-            }
-        }
-
-        summary.missing += db.mark_missing_under_folder(&folder.path, &seen_paths)?;
-        db.touch_folder_scanned(folder.id)?;
+            summary.missing += batch_db.mark_missing_under_folder(&folder_path, &seen_paths)?;
+            batch_db.touch_folder_scanned(folder_id)?;
+            Ok(())
+        })?;
     }
 
     Ok(summary)

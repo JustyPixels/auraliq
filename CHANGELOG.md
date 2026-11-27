@@ -5,6 +5,23 @@ All notable changes to **Auraliq** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-11-27
+
+### Security
+
+- Upgraded `rusqlite` (`0.35` -> `0.43`, bundling `libsqlite3-sys 0.40.0`) to resolve `RUSTSEC-2026-0459` (0 vulnerabilities in `cargo audit`).
+- Upgraded `vitest` (`3.2.7` -> `4.1.12`) to resolve `tinypool` / `@vitest/mocker` dev-dependency advisories (0 vulnerabilities in `pnpm audit`).
+- Hardened `validate_remote_url` against embedded `@` credentials and `.internal` hostnames, and hardened `sanitize_filename` against Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM1–9`, `LPT1–9`) and trailing dots/spaces.
+
+### Changed
+
+- Reduced idle/paused audio worker thread CPU wakeups by blocking on `rx.recv_timeout(150ms)` when not playing.
+- Wrapped folder scans in `Database::with_batch_transaction` for single-commit WAL performance.
+
+### Added
+
+- End-to-end Rust integration test suite (`src-tauri/tests/integration_pipeline.rs`) and QA/Security audit report (`docs/QA_SECURITY_AUDIT.md`).
+
 ## [0.8.1] - 2026-11-27
 
 ### Added

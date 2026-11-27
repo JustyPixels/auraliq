@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.8.1 — Milestone 12](https://img.shields.io/badge/Status-v0.8.1%20Milestone%2012-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.9.0 — Milestone 13](https://img.shields.io/badge/Status-v0.9.0%20Milestone%2013-4c1d95.svg)](ROADMAP.md)
 [![Website](https://img.shields.io/badge/Website-GitHub%20Pages-6d28d9.svg)](https://justypixels.github.io/auraliq/)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
@@ -31,7 +31,7 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.8.1 — Milestone 12 Website, DSP, Lyrics & Visualizers)
+### Available (v0.9.0 — Milestone 13 QA, Optimization & Security)
 
 - **Audio DSP & Playback Enhancements**: 5-band biquad Equalizer with 6 presets, ReplayGain normalization, **Gapless Playback**, and **Crossfade (0–8s)**
 - **Opt-In Synced & Local Lyrics**: Automatic offline `.lrc` sidecars + optional opt-in LRCLIB synced/plain lyrics with click-to-seek
@@ -49,7 +49,7 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ### In Development
 
-- QA, Performance Profiling & Security Audit (Milestone 13)
+- Windows NSIS Installer & Portable ZIP MVP Release (Milestone 14)
 
 ### Planned
 
