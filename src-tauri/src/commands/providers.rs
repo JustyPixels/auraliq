@@ -1,7 +1,7 @@
 use tauri::State;
 
 use crate::error::AppError;
-use crate::providers::{ProviderInfo, ProviderSearchResult};
+use crate::providers::{OnlineTrack, ProviderInfo, ProviderSearchResult};
 use crate::security::credentials::CredentialStore;
 use crate::security::validation::validate_remote_url;
 use crate::AppState;
@@ -111,4 +111,45 @@ pub fn play_online_track(
     );
     state.media_session.update_playback("playing", 0);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn resolve_and_play_online_track(
+    track: OnlineTrack,
+    state: State<'_, AppState>,
+) -> Result<String, AppError> {
+    let provider = state
+        .providers
+        .get(&track.provider_id)
+        .ok_or_else(|| AppError::NotFound(format!("provider {}", track.provider_id)))?;
+    if !provider.capabilities().stream_playback {
+        return Err(AppError::UnsupportedProviderAction(format!(
+            "'{}' does not permit direct in-app audio streaming",
+            provider.name()
+        )));
+    }
+
+    let resolved = if track.provider_id == "radio_browser" || track.stream_url.is_none() {
+        state
+            .providers
+            .resolve_stream(&track.provider_id, &track.external_id)
+            .await?
+    } else {
+        track
+            .stream_url
+            .clone()
+            .ok_or_else(|| AppError::Provider("Missing stream URL".to_string()))?
+    };
+
+    let validated = validate_remote_url(&resolved, true)?;
+    let final_url = validated.to_string();
+    state.audio.load_and_play_url(final_url.clone())?;
+    state.media_session.update_metadata(
+        &track.title,
+        &track.artist,
+        &track.album,
+        track.duration_ms.max(0) as u64,
+    );
+    state.media_session.update_playback("playing", 0);
+    Ok(final_url)
 }

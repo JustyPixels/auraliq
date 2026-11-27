@@ -1,4 +1,10 @@
+pub mod audius;
+pub mod freesound;
+pub mod internet_archive;
+pub mod jamendo;
+pub mod radio_browser;
 pub mod types;
+pub mod youtube;
 
 use std::sync::Arc;
 
@@ -7,9 +13,15 @@ use async_trait::async_trait;
 use crate::database::Database;
 use crate::error::AppError;
 use crate::security::credentials::CredentialStore;
+use audius::AudiusProvider;
+use freesound::FreesoundProvider;
+use internet_archive::InternetArchiveProvider;
+use jamendo::JamendoProvider;
+use radio_browser::RadioBrowserProvider;
 pub use types::{
     OnlineTrack, ProviderAuthField, ProviderCapabilities, ProviderInfo, ProviderSearchResult,
 };
+use youtube::YouTubeProvider;
 
 #[async_trait]
 pub trait MusicProvider: Send + Sync {
@@ -19,6 +31,7 @@ pub trait MusicProvider: Send + Sync {
     fn status_label(&self) -> &'static str;
     fn description(&self) -> &'static str;
     fn restriction_note(&self) -> &'static str;
+    fn auth_help(&self) -> Option<&'static str>;
     fn default_enabled(&self) -> bool;
     fn implemented_for_streaming(&self) -> bool;
     fn capabilities(&self) -> ProviderCapabilities;
@@ -26,14 +39,14 @@ pub trait MusicProvider: Send + Sync {
 
     async fn search(&self, _query: &str, _limit: usize) -> Result<Vec<OnlineTrack>, AppError> {
         Err(AppError::UnsupportedProviderAction(format!(
-            "Online search for '{}' is scheduled for Milestone 8",
+            "Online search is not supported by '{}'",
             self.name()
         )))
     }
 
     async fn resolve_stream(&self, _external_id: &str) -> Result<String, AppError> {
         Err(AppError::UnsupportedProviderAction(format!(
-            "Streaming for '{}' is not enabled in this milestone",
+            "Stream resolution is not supported by '{}'",
             self.name()
         )))
     }
@@ -46,6 +59,7 @@ struct DescriptorProvider {
     status_label: &'static str,
     description: &'static str,
     restriction_note: &'static str,
+    auth_help: Option<&'static str>,
     default_enabled: bool,
     implemented_for_streaming: bool,
     capabilities: ProviderCapabilities,
@@ -71,6 +85,9 @@ impl MusicProvider for DescriptorProvider {
     }
     fn restriction_note(&self) -> &'static str {
         self.restriction_note
+    }
+    fn auth_help(&self) -> Option<&'static str> {
+        self.auth_help
     }
     fn default_enabled(&self) -> bool {
         self.default_enabled
@@ -107,6 +124,7 @@ impl ProviderRegistry {
                 status_label: "Active (M4)",
                 description: "Offline local music folders with Symphonia decoding and SQLite FTS5.",
                 restriction_note: "WMA is unsupported by Symphonia; all data stays local.",
+                auth_help: None,
                 default_enabled: true,
                 implemented_for_streaming: true,
                 capabilities: ProviderCapabilities {
@@ -123,82 +141,17 @@ impl ProviderRegistry {
                 },
                 auth_fields: vec![],
             }),
-            Arc::new(DescriptorProvider {
-                id: "internet_archive",
-                name: "Internet Archive",
-                tier: "Tier 2 — MVP Online",
-                status_label: "Framework Ready (M8)",
-                description: "Open archival audio catalog with free streaming and permitted downloads.",
-                restriction_note: "Respects item licenses and polite API rate limits.",
-                default_enabled: true,
-                implemented_for_streaming: false,
-                capabilities: ProviderCapabilities {
-                    search: true,
-                    metadata: true,
-                    stream_playback: true,
-                    external_playback_only: false,
-                    playback_control: true,
-                    playlists: false,
-                    download: true,
-                    offline_cache_allowed: true,
-                    lyrics: false,
-                    requires_auth: false,
-                },
-                auth_fields: vec![],
-            }),
-            Arc::new(DescriptorProvider {
-                id: "audius",
-                name: "Audius",
-                tier: "Tier 2 — MVP Online",
-                status_label: "Framework Ready (M8)",
-                description: "Open decentralized music catalog with free 320kbps streaming.",
-                restriction_note: "Downloads depend on individual artist track permissions.",
-                default_enabled: true,
-                implemented_for_streaming: false,
-                capabilities: ProviderCapabilities {
-                    search: true,
-                    metadata: true,
-                    stream_playback: true,
-                    external_playback_only: false,
-                    playback_control: true,
-                    playlists: true,
-                    download: false,
-                    offline_cache_allowed: true,
-                    lyrics: false,
-                    requires_auth: false,
-                },
-                auth_fields: vec![],
-            }),
-            Arc::new(DescriptorProvider {
-                id: "radio_browser",
-                name: "Radio Browser",
-                tier: "Tier 2 — MVP Online",
-                status_label: "Framework Ready (M8)",
-                description: "Community-driven directory of free global internet radio stations.",
-                restriction_note: "Live streams only; downloads and offline caching are disabled.",
-                default_enabled: true,
-                implemented_for_streaming: false,
-                capabilities: ProviderCapabilities {
-                    search: true,
-                    metadata: true,
-                    stream_playback: true,
-                    external_playback_only: false,
-                    playback_control: false,
-                    playlists: false,
-                    download: false,
-                    offline_cache_allowed: false,
-                    lyrics: false,
-                    requires_auth: false,
-                },
-                auth_fields: vec![],
-            }),
+            Arc::new(AudiusProvider),
+            Arc::new(InternetArchiveProvider),
+            Arc::new(RadioBrowserProvider),
             Arc::new(DescriptorProvider {
                 id: "direct_url",
                 name: "Direct Audio URLs & RSS",
                 tier: "Tier 2 — MVP Online",
-                status_label: "Framework Ready (M8)",
-                description: "User-supplied HTTPS audio stream links and open podcast RSS feeds.",
+                status_label: "Live (Stream URL)",
+                description: "User-supplied HTTPS audio stream links and direct MP3/OGG/FLAC URLs.",
                 restriction_note: "URLs are validated against SSRF and private-IP blocklists.",
+                auth_help: None,
                 default_enabled: true,
                 implemented_for_streaming: true,
                 capabilities: ProviderCapabilities {
@@ -215,59 +168,17 @@ impl ProviderRegistry {
                 },
                 auth_fields: vec![],
             }),
-            Arc::new(DescriptorProvider {
-                id: "jamendo",
-                name: "Jamendo",
-                tier: "Tier 2B — Open Catalog",
-                status_label: "Optional (BYO Client ID)",
-                description: "Creative Commons independent music catalog (35k req/month free tier).",
-                restriction_note: "Requires user-provided Jamendo Client ID; respects CC license terms.",
-                default_enabled: false,
-                implemented_for_streaming: false,
-                capabilities: ProviderCapabilities {
-                    search: true,
-                    metadata: true,
-                    stream_playback: true,
-                    external_playback_only: false,
-                    playback_control: true,
-                    playlists: true,
-                    download: true,
-                    offline_cache_allowed: true,
-                    lyrics: false,
-                    requires_auth: true,
-                },
-                auth_fields: vec![("client_id", "Jamendo Client ID", true)],
-            }),
-            Arc::new(DescriptorProvider {
-                id: "youtube",
-                name: "YouTube",
-                tier: "Tier 3 — Optional Restricted",
-                status_label: "Restricted (Visible Embed)",
-                description: "Data API v3 search and visible IFrame Player embed.",
-                restriction_note: "YouTube ToS strictly prohibits audio ripping, hidden/audio-only play, downloading, and offline caching.",
-                default_enabled: false,
-                implemented_for_streaming: false,
-                capabilities: ProviderCapabilities {
-                    search: true,
-                    metadata: true,
-                    stream_playback: false,
-                    external_playback_only: true,
-                    playback_control: true,
-                    playlists: false,
-                    download: false,
-                    offline_cache_allowed: false,
-                    lyrics: false,
-                    requires_auth: true,
-                },
-                auth_fields: vec![("api_key", "YouTube Data API v3 Key", true)],
-            }),
+            Arc::new(JamendoProvider),
+            Arc::new(FreesoundProvider),
+            Arc::new(YouTubeProvider),
             Arc::new(DescriptorProvider {
                 id: "spotify",
                 name: "Spotify",
                 tier: "Tier 3 — Optional Restricted",
-                status_label: "Restricted (Connect / Metadata)",
+                status_label: "Restricted (Metadata)",
                 description: "Metadata lookup and Spotify Connect / external player handoff.",
                 restriction_note: "2026 Spotify Dev Mode requires developer Premium, caps at 5 users, and prohibits downloads or stream extraction.",
+                auth_help: Some("Optional Spotify Developer Client ID (requires Spotify Premium developer account)."),
                 default_enabled: false,
                 implemented_for_streaming: false,
                 capabilities: ProviderCapabilities {
@@ -319,6 +230,7 @@ impl ProviderRegistry {
                     enabled,
                     implemented_for_streaming: p.implemented_for_streaming(),
                     auth_configured,
+                    auth_help: p.auth_help().map(ToString::to_string),
                     capabilities: p.capabilities(),
                     auth_fields: fields,
                 }
@@ -338,7 +250,7 @@ impl ProviderRegistry {
             .ok_or_else(|| AppError::NotFound(format!("provider {provider_id}")))?;
         if !enabled {
             return Err(AppError::Provider(format!(
-                "Provider '{}' is disabled",
+                "Provider '{}' is disabled. Enable it in Settings -> Providers.",
                 provider.name()
             )));
         }
@@ -353,6 +265,23 @@ impl ProviderRegistry {
             provider_id: provider_id.to_string(),
             tracks,
         })
+    }
+
+    pub async fn resolve_stream(
+        &self,
+        provider_id: &str,
+        external_id: &str,
+    ) -> Result<String, AppError> {
+        let provider = self
+            .get(provider_id)
+            .ok_or_else(|| AppError::NotFound(format!("provider {provider_id}")))?;
+        if !provider.capabilities().stream_playback {
+            return Err(AppError::UnsupportedProviderAction(format!(
+                "'{}' does not permit direct in-app audio streaming",
+                provider.name()
+            )));
+        }
+        provider.resolve_stream(external_id).await
     }
 }
 
@@ -381,5 +310,10 @@ mod tests {
         let rb = registry.get("radio_browser").expect("radio browser");
         assert!(!rb.capabilities().download);
         assert!(!rb.capabilities().offline_cache_allowed);
+        assert!(rb.implemented_for_streaming());
+
+        let audius = registry.get("audius").expect("audius provider");
+        assert!(audius.implemented_for_streaming());
+        assert!(registry.get("freesound").is_some());
     }
 }

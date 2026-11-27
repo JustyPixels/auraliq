@@ -84,12 +84,12 @@
 
 ---
 
-## Milestone 8 — First Online Integrations (`0.5.0`)
+## Milestone 8 — First Online Integrations (`0.5.0`) [COMPLETED]
 
-- [ ] Implement Internet Archive provider (search, metadata, stream, permitted download)
-- [ ] Implement Radio Browser provider (search, click reporting, live stream)
-- [ ] Implement Direct Audio URL / Podcast RSS provider
-- [ ] Evaluate & integrate Jamendo / Audius (and optional compliant YouTube/Spotify if scoped)
+- [x] Implement Internet Archive provider (search, metadata, stream, permitted download)
+- [x] Implement Radio Browser provider (search, click reporting, live stream)
+- [x] Implement Direct Audio URL / Podcast RSS provider
+- [x] Integrate Audius (trending, search, 320kbps HTTP stream) and BYOK Jamendo, Freesound, and YouTube (metadata + external watch link)
 
 ---
 

@@ -13,7 +13,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 }));
 
 describe("SearchPage", () => {
-  it("supports source, duration, and favorites filters and shows honest online notice", () => {
+  it("supports local filters and online/BYOK provider source chips", () => {
     render(<SearchPage />);
 
     expect(screen.getByLabelText("Filter by genre")).toBeInTheDocument();
@@ -23,8 +23,11 @@ describe("SearchPage", () => {
     fireEvent.click(favBtn);
     expect(favBtn).toHaveAttribute("aria-pressed", "true");
 
+    expect(screen.getByRole("button", { name: "Audius" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Jamendo (Key)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Freesound (Key)" })).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: "Internet Archive" }));
-    expect(screen.getByText("Online Provider Search Scheduled")).toBeInTheDocument();
-    expect(screen.getByText("Milestone 8")).toBeInTheDocument();
+    expect(screen.getByText("Desktop Runtime Required for Online Search")).toBeInTheDocument();
   });
 });

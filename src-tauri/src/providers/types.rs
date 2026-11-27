@@ -32,6 +32,7 @@ pub struct ProviderInfo {
     pub enabled: bool,
     pub implemented_for_streaming: bool,
     pub auth_configured: bool,
+    pub auth_help: Option<String>,
     pub capabilities: ProviderCapabilities,
     pub auth_fields: Vec<ProviderAuthField>,
 }

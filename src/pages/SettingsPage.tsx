@@ -425,6 +425,11 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
                       marginTop: "0.25rem",
                     }}
                   >
+                    {provider.auth_help && (
+                      <span style={{ fontSize: "0.76rem", color: "var(--aq-secondary-accent)" }}>
+                        {provider.auth_help}
+                      </span>
+                    )}
                     {provider.auth_fields.map((field) => {
                       const keyId = `${provider.id}:${field.key}`;
                       return (

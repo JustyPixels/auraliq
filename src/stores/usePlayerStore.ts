@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { backendApi, isTauriRuntime } from "../api/backend";
 import type { AudioDeviceInfo, RepeatMode, TrackRecord, VisualizerStyle } from "../types/music";
+import type { OnlineTrack } from "../types/providers";
+
+export type QueuedTrack = TrackRecord & {
+  onlineMeta?: OnlineTrack;
+};
 
 export type PlaybackStatus = "idle" | "playing" | "paused" | "ended" | "error";
 
@@ -62,9 +67,9 @@ function writePrefs(prefs: PlaybackPrefs): void {
 }
 
 export interface PlayerStore extends PlaybackPrefs {
-  queue: TrackRecord[];
+  queue: QueuedTrack[];
   queueIndex: number;
-  currentTrack: TrackRecord | null;
+  currentTrack: QueuedTrack | null;
   status: PlaybackStatus;
   positionMs: number;
   durationMs: number;
@@ -77,8 +82,10 @@ export interface PlayerStore extends PlaybackPrefs {
   toastMessage: PlaybackToastMessage | null;
   hydrate: (tracks: TrackRecord[]) => Promise<void>;
   playTrackList: (tracks: TrackRecord[], startIndex?: number) => Promise<void>;
+  playOnlineTrackList: (tracks: OnlineTrack[], startIndex?: number) => Promise<void>;
   playQueueIndex: (index: number) => Promise<void>;
   addToQueue: (track: TrackRecord) => void;
+  addOnlineToQueue: (track: OnlineTrack) => void;
   playNext: (track: TrackRecord) => void;
   moveQueueItem: (fromIndex: number, toIndex: number) => void;
   removeFromQueue: (index: number) => void;
@@ -119,6 +126,35 @@ function pickPrefs(s: PlayerStore): PlaybackPrefs {
   };
 }
 
+function onlineToQueuedTrack(track: OnlineTrack, idx: number): QueuedTrack {
+  return {
+    id: -(idx + 1),
+    source_provider: track.provider_id,
+    file_path: track.stream_url ?? track.external_id,
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    album_artist: track.artist,
+    genre: track.provider_id,
+    duration_ms: track.duration_ms,
+    track_number: null,
+    disc_number: null,
+    release_year: null,
+    format: "stream",
+    bitrate_kbps: null,
+    sample_rate_hz: null,
+    artwork_path: track.artwork_url,
+    file_size: 0,
+    modified_at: 0,
+    is_missing: false,
+    play_count: 0,
+    last_played_at: null,
+    is_favorite: false,
+    added_at: 0,
+    onlineMeta: track,
+  };
+}
+
 const initialPrefs = readPrefs();
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
@@ -142,15 +178,17 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       return;
     }
     const s = get();
+    const localQueueIds = s.queue.filter((t) => t.id > 0).map((t) => t.id);
+    const localCurrentId = s.currentTrack && s.currentTrack.id > 0 ? s.currentTrack.id : null;
     void backendApi.savePlaybackState({
-      current_track_id: s.currentTrack?.id ?? null,
-      position_ms: s.positionMs,
+      current_track_id: localCurrentId,
+      position_ms: localCurrentId ? s.positionMs : 0,
       volume: s.volume,
       muted: s.muted,
       shuffle: s.shuffle,
       repeat_mode: s.repeatMode,
-      queue_track_ids: s.queue.map((t) => t.id),
-      queue_index: s.queueIndex,
+      queue_track_ids: localQueueIds,
+      queue_index: localCurrentId ? s.queueIndex : -1,
     });
   },
 
@@ -234,6 +272,40 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     get().persistState();
   },
 
+  playOnlineTrackList: async (tracks, startIndex = 0) => {
+    if (tracks.length === 0) {
+      return;
+    }
+    const queued = tracks.map((t, i) => onlineToQueuedTrack(t, i));
+    const idx = Math.max(0, Math.min(startIndex, queued.length - 1));
+    const target = queued[idx];
+    const notify = get().notificationsEnabled;
+    set({
+      queue: queued,
+      queueIndex: idx,
+      currentTrack: target,
+      positionMs: 0,
+      durationMs: target.duration_ms,
+      status: "playing",
+      error: null,
+      toastMessage: notify
+        ? { title: target.title, subtitle: `${target.artist} • ${target.album}`, tone: "accent" }
+        : null,
+    });
+    if (isTauriRuntime() && target.onlineMeta) {
+      try {
+        await backendApi.resolveAndPlayOnlineTrack(target.onlineMeta);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        set({
+          status: "error",
+          error: msg,
+          toastMessage: { title: "Stream Error", subtitle: msg, tone: "warn" },
+        });
+      }
+    }
+  },
+
   playQueueIndex: async (index) => {
     const { queue, notificationsEnabled } = get();
     if (index < 0 || index >= queue.length) {
@@ -253,7 +325,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     });
     if (isTauriRuntime()) {
       try {
-        await backendApi.playTrack(target.id, 0);
+        if (target.onlineMeta) {
+          await backendApi.resolveAndPlayOnlineTrack(target.onlineMeta);
+        } else {
+          await backendApi.playTrack(target.id, 0);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         set({
@@ -269,6 +345,12 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   addToQueue: (track) => {
     set((state) => ({ queue: [...state.queue, track] }));
     get().persistState();
+  },
+
+  addOnlineToQueue: (track) => {
+    set((state) => ({
+      queue: [...state.queue, onlineToQueuedTrack(track, state.queue.length + 1000)],
+    }));
   },
 
   playNext: (track) => {
@@ -362,8 +444,10 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     }
     if (isTauriRuntime()) {
       const snap = await backendApi.getPlaybackStatus();
-      if (snap.current_path === currentTrack.file_path && snap.status === "paused") {
+      if (snap.status === "paused") {
         await backendApi.resumePlayback();
+      } else if (currentTrack.onlineMeta) {
+        await backendApi.resolveAndPlayOnlineTrack(currentTrack.onlineMeta);
       } else {
         await backendApi.playTrack(currentTrack.id, positionMs);
       }
@@ -387,7 +471,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ status: "playing", error: null, toastMessage: null });
     if (isTauriRuntime()) {
       try {
-        await backendApi.playTrack(currentTrack.id, positionMs);
+        if (currentTrack.onlineMeta) {
+          await backendApi.resolveAndPlayOnlineTrack(currentTrack.onlineMeta);
+        } else {
+          await backendApi.playTrack(currentTrack.id, positionMs);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         set({

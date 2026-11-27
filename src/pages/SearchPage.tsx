@@ -1,4 +1,4 @@
-import { ListPlus, Play, Search, Trash2 } from "lucide-react";
+import { ExternalLink, ListPlus, Music, Play, Search, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { backendApi, formatDurationMs, isTauriRuntime } from "../api/backend";
 import { Badge } from "../components/Badge";
@@ -8,15 +8,20 @@ import { Panel } from "../components/Panel";
 import { useLibraryStore } from "../stores/useLibraryStore";
 import { usePlayerStore } from "../stores/usePlayerStore";
 import type { TrackRecord } from "../types/music";
+import type { OnlineTrack } from "../types/providers";
 
-type SourceFilter = "all" | "local" | "internet_archive" | "radio_browser";
+type SourceFilter =
+  "local" | "audius" | "internet_archive" | "radio_browser" | "jamendo" | "freesound" | "youtube";
 type DurationFilter = "any" | "short" | "medium" | "long";
 
 const SOURCE_FILTERS: readonly { id: SourceFilter; label: string }[] = [
-  { id: "all", label: "All Sources" },
-  { id: "local", label: "Local" },
+  { id: "local", label: "Local Library" },
+  { id: "audius", label: "Audius" },
   { id: "internet_archive", label: "Internet Archive" },
   { id: "radio_browser", label: "Radio Browser" },
+  { id: "jamendo", label: "Jamendo (Key)" },
+  { id: "freesound", label: "Freesound (Key)" },
+  { id: "youtube", label: "YouTube (Key)" },
 ];
 
 const HISTORY_KEY = "auraliq.searchHistory.v1";
@@ -32,16 +37,19 @@ function loadHistory(): string[] {
 
 export function SearchPage() {
   const [query, setQuery] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("local");
   const [genreFilter, setGenreFilter] = useState("");
   const [durationFilter, setDurationFilter] = useState<DurationFilter>("any");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [history, setHistory] = useState<string[]>(loadHistory);
-  const [results, setResults] = useState<TrackRecord[]>([]);
+  const [localResults, setLocalResults] = useState<TrackRecord[]>([]);
+  const [onlineResults, setOnlineResults] = useState<OnlineTrack[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const genres = useLibraryStore((state) => state.genres);
-  const { playTrackList, addToQueue } = usePlayerStore();
+  const { playTrackList, playOnlineTrackList, addToQueue, addOnlineToQueue } = usePlayerStore();
   const inTauri = isTauriRuntime();
 
   useEffect(() => {
@@ -49,30 +57,60 @@ export function SearchPage() {
   }, []);
 
   useEffect(() => {
-    if (!inTauri || (sourceFilter !== "all" && sourceFilter !== "local")) {
-      setResults([]);
+    if (!inTauri) {
+      setLocalResults([]);
+      setOnlineResults([]);
       return;
     }
-    let cancelled = false;
-    const min_duration_sec =
-      durationFilter === "medium" ? 180 : durationFilter === "long" ? 360 : undefined;
-    const max_duration_sec =
-      durationFilter === "short" ? 180 : durationFilter === "medium" ? 360 : undefined;
 
-    void backendApi
-      .searchTracksFiltered({
-        query,
-        source: sourceFilter,
-        genre: genreFilter || undefined,
-        min_duration_sec,
-        max_duration_sec,
-        favorites_only: favoritesOnly,
-      })
-      .then((hits) => {
-        if (!cancelled) {
-          setResults(hits);
-        }
-      });
+    let cancelled = false;
+    setSearchError(null);
+
+    if (sourceFilter === "local") {
+      const min_duration_sec =
+        durationFilter === "medium" ? 180 : durationFilter === "long" ? 360 : undefined;
+      const max_duration_sec =
+        durationFilter === "short" ? 180 : durationFilter === "medium" ? 360 : undefined;
+
+      void backendApi
+        .searchTracksFiltered({
+          query,
+          source: "local",
+          genre: genreFilter || undefined,
+          min_duration_sec,
+          max_duration_sec,
+          favorites_only: favoritesOnly,
+        })
+        .then((hits) => {
+          if (!cancelled) {
+            setLocalResults(hits);
+            setOnlineResults([]);
+          }
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            setSearchError(err instanceof Error ? err.message : String(err));
+          }
+        });
+    } else {
+      setSearching(true);
+      void backendApi
+        .searchProvider(sourceFilter, query, 20)
+        .then((res) => {
+          if (!cancelled) {
+            setOnlineResults(res.tracks);
+            setLocalResults([]);
+            setSearching(false);
+          }
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            setOnlineResults([]);
+            setSearching(false);
+            setSearchError(err instanceof Error ? err.message : String(err));
+          }
+        });
+    }
 
     return () => {
       cancelled = true;
@@ -102,6 +140,8 @@ export function SearchPage() {
     }
   };
 
+  const resultCount = sourceFilter === "local" ? localResults.length : onlineResults.length;
+
   return (
     <>
       <Panel title="Unified Search" ledActive>
@@ -119,7 +159,7 @@ export function SearchPage() {
               type="search"
               className="aq-input"
               style={{ flex: 1, minWidth: "220px" }}
-              placeholder="Search local tracks, albums, artists, or genres..."
+              placeholder="Search local tracks or online catalogs..."
               aria-label="Search music"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -144,41 +184,45 @@ export function SearchPage() {
               </Button>
             ))}
 
-            <select
-              aria-label="Filter by genre"
-              className="aq-select"
-              value={genreFilter}
-              onChange={(e) => setGenreFilter(e.target.value)}
-            >
-              <option value="">All Genres</option>
-              {genres.map((g) => (
-                <option key={g.name} value={g.name}>
-                  {g.name} ({g.track_count})
-                </option>
-              ))}
-            </select>
+            {sourceFilter === "local" && (
+              <>
+                <select
+                  aria-label="Filter by genre"
+                  className="aq-select"
+                  value={genreFilter}
+                  onChange={(e) => setGenreFilter(e.target.value)}
+                >
+                  <option value="">All Genres</option>
+                  {genres.map((g) => (
+                    <option key={g.name} value={g.name}>
+                      {g.name} ({g.track_count})
+                    </option>
+                  ))}
+                </select>
 
-            <select
-              aria-label="Filter by duration"
-              className="aq-select"
-              value={durationFilter}
-              onChange={(e) => setDurationFilter(e.target.value as DurationFilter)}
-            >
-              <option value="any">Any Duration</option>
-              <option value="short">Under 3 min</option>
-              <option value="medium">3 – 6 min</option>
-              <option value="long">Over 6 min</option>
-            </select>
+                <select
+                  aria-label="Filter by duration"
+                  className="aq-select"
+                  value={durationFilter}
+                  onChange={(e) => setDurationFilter(e.target.value as DurationFilter)}
+                >
+                  <option value="any">Any Duration</option>
+                  <option value="short">Under 3 min</option>
+                  <option value="medium">3 – 6 min</option>
+                  <option value="long">Over 6 min</option>
+                </select>
 
-            <Button
-              size="sm"
-              variant="secondary"
-              active={favoritesOnly}
-              aria-pressed={favoritesOnly}
-              onClick={() => setFavoritesOnly((prev) => !prev)}
-            >
-              Favorites Only
-            </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  active={favoritesOnly}
+                  aria-pressed={favoritesOnly}
+                  onClick={() => setFavoritesOnly((prev) => !prev)}
+                >
+                  Favorites Only
+                </Button>
+              </>
+            )}
           </div>
         </form>
       </Panel>
@@ -203,16 +247,25 @@ export function SearchPage() {
         </Panel>
       )}
 
-      <Panel title="Results" badge={<Badge>{results.length}</Badge>}>
-        {results.length > 0 ? (
+      <Panel
+        title="Results"
+        badge={<Badge>{searching ? "Searching..." : `${resultCount} results`}</Badge>}
+      >
+        {searchError && (
+          <p role="alert" style={{ color: "var(--aq-warn)", marginTop: 0 }}>
+            {searchError}
+          </p>
+        )}
+
+        {sourceFilter === "local" && localResults.length > 0 && (
           <div className="aq-track-list">
-            {results.map((track, idx) => (
+            {localResults.map((track, idx) => (
               <div key={track.id} className="aq-track-row">
                 <Button
                   size="icon"
                   variant="primary"
                   aria-label={`Play ${track.title}`}
-                  onClick={() => void playTrackList(results, idx)}
+                  onClick={() => void playTrackList(localResults, idx)}
                 >
                   <Play size={14} />
                 </Button>
@@ -238,25 +291,83 @@ export function SearchPage() {
               </div>
             ))}
           </div>
-        ) : (
+        )}
+
+        {sourceFilter !== "local" && onlineResults.length > 0 && (
+          <div className="aq-track-list">
+            {onlineResults.map((track, idx) => (
+              <div key={`${track.provider_id}-${track.external_id}`} className="aq-track-row">
+                <div className="aq-thumb">
+                  {track.artwork_url ? <img src={track.artwork_url} alt="" /> : <Music size={16} />}
+                </div>
+                <div className="aq-truncate">
+                  <strong>{track.title}</strong>
+                  <div style={{ fontSize: "0.76rem", color: "var(--aq-muted)" }}>
+                    {track.artist}
+                  </div>
+                </div>
+                <div className="aq-truncate" style={{ color: "var(--aq-muted)" }}>
+                  {track.album}
+                </div>
+                <Badge tone="accent">{track.provider_id.toUpperCase()}</Badge>
+                <span className="aq-timecode">
+                  {track.duration_ms > 0 ? formatDurationMs(track.duration_ms) : "LIVE"}
+                </span>
+                <div className="aq-row-wrap">
+                  {track.provider_id === "youtube" ? (
+                    track.external_url && (
+                      <a
+                        href={track.external_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="aq-btn aq-btn--secondary aq-btn--sm"
+                      >
+                        <ExternalLink size={13} />
+                        Watch
+                      </a>
+                    )
+                  ) : (
+                    <>
+                      <Button
+                        size="icon"
+                        variant="primary"
+                        aria-label={`Play ${track.title}`}
+                        onClick={() => void playOnlineTrackList(onlineResults, idx)}
+                      >
+                        <Play size={14} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={`Add ${track.title} to queue`}
+                        onClick={() => addOnlineToQueue(track)}
+                      >
+                        <ListPlus size={14} />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {resultCount === 0 && !searching && (
           <EmptyState
             icon={<Search size={20} />}
             title={
-              sourceFilter === "internet_archive" || sourceFilter === "radio_browser"
-                ? "Online Provider Search Scheduled"
-                : query.trim()
+              sourceFilter === "local"
+                ? query.trim()
                   ? `No local results for "${query.trim()}"`
                   : "Search Local FTS5 Index"
+                : inTauri
+                  ? `No results from ${sourceFilter}`
+                  : "Desktop Runtime Required for Online Search"
             }
             description={
-              sourceFilter === "internet_archive" || sourceFilter === "radio_browser"
-                ? "Online provider search (Internet Archive, Radio Browser) unlocks in Milestone 8."
-                : "Type to search your local SQLite FTS5 library by title, artist, album, or genre."
-            }
-            milestoneTag={
-              sourceFilter === "internet_archive" || sourceFilter === "radio_browser"
-                ? "Milestone 8"
-                : undefined
+              sourceFilter === "local"
+                ? "Type to search your local SQLite FTS5 library by title, artist, album, or genre."
+                : "Select Audius, Internet Archive, or Radio Browser for free zero-config streaming, or add your own API keys for Jamendo, Freesound, and YouTube in Settings -> Providers."
             }
           />
         )}

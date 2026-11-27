@@ -5,6 +5,15 @@ All notable changes to **Auraliq** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-27
+
+### Added
+
+- **Milestone 8 (First Online Integrations)**:
+  - Zero-config online music providers: **Audius** (trending + search + 320kbps streaming), **Internet Archive** (open archival audio search + stream resolution), **Radio Browser** (global radio directory + click reporting), and **Direct Audio URLs**.
+  - Bring-Your-Own-Key (BYOK) providers stored securely in Windows Credential Manager (`keyring`): **Jamendo** (CC catalog), **Freesound** (CC ambient/synth audio), and **YouTube** (Data API v3 search + external watch handoff).
+  - Updated `DiscoverPage` with `Online Stream Deck` (Audius Trending, Top Live Radio, Direct URL player) and `SearchPage` with live online & BYOK search tabs.
+
 ## [0.4.0] - 2026-11-27
 
 ### Added

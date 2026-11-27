@@ -22,7 +22,8 @@ describe("DiscoverPage", () => {
 
   it("shows empty state when no tracks are indexed", () => {
     render(<DiscoverPage />);
-    expect(screen.getByText("No Tracks Indexed Yet")).toBeInTheDocument();
+    expect(screen.getByText("No Local Tracks Indexed Yet")).toBeInTheDocument();
+    expect(screen.getByText("Online Stream Deck")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Shuffle 10 Random" })).toBeDisabled();
   });
 

@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.4.0 — Milestone 7](https://img.shields.io/badge/Status-v0.4.0%20Milestone%207-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.5.0 — Milestone 8](https://img.shields.io/badge/Status-v0.5.0%20Milestone%208-4c1d95.svg)](ROADMAP.md)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
 
@@ -24,20 +24,19 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.4.0 — Milestone 7 Online Provider Framework)
+### Available (v0.5.0 — Milestone 8 First Online Integrations)
 
+- **Zero-Config Online Music**: **Audius** (trending & search, free 320kbps streaming), **Internet Archive** (open archival audio), **Radio Browser** (global live radio), and **Direct Audio URLs**
+- **Bring-Your-Own-Key (BYOK) Providers**: **Jamendo** (CC catalog), **Freesound** (CC ambient/synth stems), and **YouTube** (Data API v3 search + external watch handoff) stored in Windows Credential Manager
 - Dedicated-thread Rust audio engine (`symphonia` + `cpal` + stereo resampler) supporting local files and validated HTTP audio streams
-- Modular `MusicProvider` trait, `ProviderCapabilities` enforcement, `ProviderRegistry`, and dynamic Provider Settings UI
-- Windows Credential Manager (`keyring`) secret storage and SSRF/URL/filename security validation (`security/`)
 - Windows SMTC & hardware media keys (`souvlaki`), CPAL audio output device selection, and automatic stream error recovery
 - Real-time `realfft` spectrum/waveform tap with Canvas visualizers (`Retro Bars`, `CRT Oscilloscope`, `Cassette Reels`) and Low-Performance mode
-- Recursive local folder scanning (`walkdir`) with `lofty` metadata extraction and cached embedded/external album artwork
-- SQLite (`rusqlite` + WAL + FTS5) library storage, filtered search, M3U/M3U8/PLS playlists, smart playlists, custom collections, duplicate detection, and non-destructive track identity matching
+- SQLite (`rusqlite` + WAL + FTS5) local library, `lofty` metadata/artwork, M3U/M3U8/PLS playlists, smart playlists, custom collections, duplicate detection, and non-destructive track identity matching
 - 5 built-in retro themes, UI density, resizable/customizable sidebar, and rebindable keyboard shortcuts
 
 ### In Development
 
-- Live online music integrations (Internet Archive, Audius, Radio Browser, Direct Audio URLs) for out-of-the-box online streaming (Milestone 8)
+- Source-aware Download Manager & LRU Temporary Playback Cache (Milestone 9)
 
 ### Planned
 
@@ -62,13 +61,17 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Supported Music Sources
 
-| Source                  | Search            | Playback            | Download            | Offline             | Status              |
-| ----------------------- | ----------------- | ------------------- | ------------------- | ------------------- | ------------------- |
-| Local Library           | Yes (FTS5)        | Yes (Symphonia)     | N/A                 | Yes                 | **Supported (M4)**  |
-| Internet Archive        | Planned (M8)      | Planned (M8)        | Planned (M8)        | Planned (M9)        | Tier 2 — MVP Online |
-| Radio Browser           | Planned (M8)      | Planned (M8)        | No (Live Radio)     | No                  | Tier 2 — MVP Online |
-| Direct Audio URLs / RSS | N/A               | Planned (M8)        | Conditional         | Conditional         | Tier 2 — MVP Online |
-| YouTube / Spotify       | Optional (Tier 3) | Restricted Official | **No** (Prohibited) | **No** (Prohibited) | Post-MVP Optional   |
+| Source               | Search     | Playback            | Download            | Offline             | Status             |
+| -------------------- | ---------- | ------------------- | ------------------- | ------------------- | ------------------ |
+| Local Library        | Yes (FTS5) | Yes (Symphonia)     | N/A                 | Yes                 | **Supported (M4)** |
+| Audius               | Yes        | Yes (320kbps)       | Artist-dependent    | Cache planned (M9)  | **Supported (M8)** |
+| Internet Archive     | Yes        | Yes (Stream)        | Planned (M9)        | Cache planned (M9)  | **Supported (M8)** |
+| Radio Browser        | Yes        | Yes (Live Radio)    | **No** (Live Radio) | **No**              | **Supported (M8)** |
+| Direct Audio URLs    | N/A        | Yes (HTTPS)         | Conditional         | Conditional         | **Supported (M8)** |
+| Jamendo (BYOK Key)   | Yes        | Yes (CC MP3)        | Planned (M9)        | Cache planned (M9)  | **Supported (M8)** |
+| Freesound (BYOK Key) | Yes        | Yes (CC Previews)   | **No**              | Cache planned (M9)  | **Supported (M8)** |
+| YouTube (BYOK Key)   | Yes        | External Watch Only | **No** (Prohibited) | **No** (Prohibited) | **Optional (M8)**  |
+| Spotify              | Limited    | Restricted Official | **No** (Prohibited) | **No** (Prohibited) | Post-MVP Optional  |
 
 See [docs/providers/PROVIDER_COMPATIBILITY.md](docs/providers/PROVIDER_COMPATIBILITY.md) for the full compliance matrix.
 

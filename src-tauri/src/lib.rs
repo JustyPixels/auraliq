@@ -106,6 +106,7 @@ pub fn run() {
             commands::providers::clear_provider_credential,
             commands::providers::search_provider,
             commands::providers::play_online_track,
+            commands::providers::resolve_and_play_online_track,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Auraliq");

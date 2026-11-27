@@ -1,6 +1,6 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import type { ProviderInfo, ProviderSearchResult } from "../types/providers";
+import type { OnlineTrack, ProviderInfo, ProviderSearchResult } from "../types/providers";
 import type {
   AlbumSummary,
   ArtistSummary,
@@ -165,4 +165,6 @@ export const backendApi = {
       album,
       durationMs,
     }),
+  resolveAndPlayOnlineTrack: (track: OnlineTrack) =>
+    invoke<string>("resolve_and_play_online_track", { track }),
 };

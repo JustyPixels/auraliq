@@ -122,4 +122,30 @@ describe("usePlayerStore", () => {
     await usePlayerStore.getState().stopPlayback();
     expect(usePlayerStore.getState().status).toBe("idle");
   });
+
+  it("queues and plays online tracks cleanly without colliding with local IDs", async () => {
+    await usePlayerStore.getState().playOnlineTrackList(
+      [
+        {
+          provider_id: "audius",
+          external_id: "D3gXE",
+          title: "Midnight Signal",
+          artist: "Neon Synth",
+          album: "Electronic",
+          duration_ms: 215_000,
+          stream_url: "https://api.audius.co/v1/tracks/D3gXE/stream?app_name=Auraliq",
+          artwork_url: null,
+          external_url: null,
+          license: null,
+          downloadable: false,
+        },
+      ],
+      0,
+    );
+
+    const state = usePlayerStore.getState();
+    expect(state.currentTrack?.id).toBeLessThan(0);
+    expect(state.currentTrack?.source_provider).toBe("audius");
+    expect(state.status).toBe("playing");
+  });
 });

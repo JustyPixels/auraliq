@@ -27,6 +27,7 @@ export interface ProviderInfo {
   enabled: boolean;
   implemented_for_streaming: boolean;
   auth_configured: boolean;
+  auth_help: string | null;
   capabilities: ProviderCapabilities;
   auth_fields: ProviderAuthField[];
 }

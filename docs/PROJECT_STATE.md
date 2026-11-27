@@ -3,26 +3,24 @@
 > **Read this file first before starting any new work session.**
 
 ## Current Status
-- **Current Milestone**: Milestone 7 — Online Provider Framework (**COMPLETED**)
-- **Next Milestone**: Milestone 8 — First Online Integrations (`0.5.0`)
-- **Current Version**: `0.4.0`
+- **Current Milestone**: Milestone 8 — First Online Integrations (**COMPLETED**)
+- **Next Milestone**: Milestone 9 — Download Manager & Cache (`0.6.0`)
+- **Current Version**: `0.5.0`
 - **Repository Status**: `https://github.com/JustyPixels/auraliq` (`main`)
 
 ## What Is Completed
-- **Milestones 0–6**: Research, Tauri v2 + React 19 foundation, brand assets, retro design system, 5 themes, persistent customizable shell, SQLite + FTS5 local music engine, `lofty` metadata/artwork, `symphonia` + `cpal` playback, Windows SMTC (`souvlaki`), `realfft` Canvas visualizer, track identity matching, smart playlists, collections, local Discover.
-- **Milestone 7**:
-  - `src-tauri/src/security/`: SSRF-safe URL validation (`validate_remote_url`), `sanitize_filename`, and Windows Credential Manager (`keyring` `3.6.3`) secret storage.
-  - `src-tauri/src/providers/`: `MusicProvider` trait, `ProviderCapabilities`, `ProviderRegistry`, and capability-gated IPC commands (`list_providers`, `set_provider_enabled`, `save_provider_credential`, `clear_provider_credential`, `search_provider`, `play_online_track`).
-  - `src-tauri/src/audio/mod.rs`: `load_and_play_url` HTTP stream decoding via `reqwest` blocking + Symphonia `ReadOnlySource`.
-  - `src-tauri/src/database/migrations.rs` (v3): `provider_settings`.
-  - Frontend: `useProvidersStore` + dynamic capability-driven `Settings -> Providers` UI with keyring credential inputs.
+- **Milestones 0–7**: Research, Tauri v2 + React 19 foundation, brand assets, retro design system, 5 themes, persistent customizable shell, SQLite + FTS5 local music engine, `lofty` metadata/artwork, `symphonia` + `cpal` playback, Windows SMTC (`souvlaki`), `realfft` Canvas visualizer, track identity matching, smart playlists, collections, `ProviderRegistry`, `keyring` credentials, SSRF URL validation.
+- **Milestone 8**:
+  - Live zero-config online music: `audius.rs` (trending + search + 320kbps streaming), `internet_archive.rs`, `radio_browser.rs`, and Direct Audio URL playback.
+  - Live BYOK providers (`keyring`): `jamendo.rs` (Client ID), `freesound.rs` (API Key), and `youtube.rs` (Data API v3 search + external watch handoff).
+  - `DiscoverPage` Online Stream Deck + `SearchPage` online & BYOK search tabs + `usePlayerStore.playOnlineTrackList`.
 
 ## What Is Currently Working
-- Full local music engine + provider framework, Windows Credential Manager integration, SSRF URL validation, and HTTP audio stream playback foundation.
+- Out-of-the-box online streaming (Audius Trending, Radio Browser, Internet Archive, Direct URLs) + BYOK catalogs + full offline local music engine.
 - All frontend (`prettier`, `eslint`, `tsc`, `vitest`, `vite build`) and Rust (`rustfmt`, `clippy`, `cargo test`) checks pass.
 
 ## What Is Currently Being Developed
-- Nothing actively in flight; ready to begin Milestone 8.
+- Nothing actively in flight; ready to begin Milestone 9.
 
 ## Outstanding Issues & Environment Notes
 1. **Windows Rust Toolchain**: Local `rustup override set stable-x86_64-pc-windows-msvc` is active; always prepend `$env:USERPROFILE\.cargo\bin` to `PATH` before running `cargo` / `rustc` / `pnpm tauri`.
@@ -36,11 +34,10 @@
 - See [TECHNICAL_DECISIONS.md](architecture/TECHNICAL_DECISIONS.md) (ADR-001 through ADR-012).
 
 ## Next Concrete Task
-Execute **Milestone 8 — First Online Integrations (`0.5.0`)**:
-1. Implement live **Internet Archive** provider (search + metadata + playable MP3/FLAC/OGG stream URLs).
-2. Implement live **Audius** provider (discovery host lookup + trending/search + free 320kbps streaming so the app plays real online music out of the box without requiring user files or accounts).
-3. Implement live **Radio Browser** provider (station search + click reporting + live radio stream playback).
-4. Implement **Direct Audio URLs** playback in UI (`Online Sources` / `SearchPage` / `DiscoverPage` with source badges).
+Execute **Milestone 9 — Download Manager & Cache (`0.6.0`)**:
+1. Source-aware Download Manager (`src-tauri/src/downloads/`) gated strictly by `capabilities().download == true` (Internet Archive, Jamendo CC-permitted tracks), with queue, pause/resume/retry/cancel, atomic `.part` writes, `lofty` metadata tagging, and `downloads` SQLite history.
+2. Temporary LRU Playback Cache (`src-tauri/src/cache/`) gated by `capabilities().offline_cache_allowed == true`, with max size, TTL expiration, and one-click clear cache.
+3. Wire `DownloadsPage.tsx` and `Settings -> Storage & Cache` UI.
 
 ## Relevant Commands
 ```powershell

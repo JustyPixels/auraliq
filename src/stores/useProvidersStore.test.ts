@@ -29,6 +29,12 @@ describe("useProvidersStore", () => {
     const rb = useProvidersStore.getState().getProvider("radio_browser");
     expect(rb?.capabilities.download).toBe(false);
     expect(rb?.capabilities.offline_cache_allowed).toBe(false);
+
+    const audius = useProvidersStore.getState().getProvider("audius");
+    expect(audius?.implemented_for_streaming).toBe(true);
+
+    const freesound = useProvidersStore.getState().getProvider("freesound");
+    expect(freesound?.auth_fields[0]?.key).toBe("api_key");
   });
 
   it("toggles provider enabled state cleanly", async () => {
