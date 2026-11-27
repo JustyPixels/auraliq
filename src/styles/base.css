@@ -1,0 +1,126 @@
+:root {
+  --aq-bg: #0f0d16;
+  --aq-surface: #181424;
+  --aq-surface-elevated: #221c35;
+  --aq-text: #f3effa;
+  --aq-muted: #a69cc2;
+  --aq-accent: #8b5cf6;
+  --aq-accent-soft: rgba(139, 92, 246, 0.16);
+  --aq-border: #2e2646;
+  --aq-ok: #34d399;
+  --aq-warn: #fbbf24;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--aq-bg);
+  color: var(--aq-text);
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.aq-foundation {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.12), transparent 45%), var(--aq-bg);
+}
+
+.aq-card {
+  width: min(640px, 100%);
+  background: var(--aq-surface);
+  border: 1px solid var(--aq-border);
+  border-radius: 10px;
+  padding: 2rem;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.aq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.aq-title {
+  margin: 0;
+  font-size: 1.85rem;
+  letter-spacing: 0.04em;
+  color: var(--aq-text);
+}
+
+.aq-tagline {
+  margin: 0 0 1.5rem;
+  color: var(--aq-muted);
+  font-size: 0.98rem;
+}
+
+.aq-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--aq-accent-soft);
+  color: var(--aq-accent);
+  border: 1px solid var(--aq-border);
+}
+
+.aq-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.aq-meta-item {
+  background: var(--aq-surface-elevated);
+  border: 1px solid var(--aq-border);
+  border-radius: 6px;
+  padding: 0.75rem 0.9rem;
+}
+
+.aq-meta-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--aq-muted);
+  margin-bottom: 0.25rem;
+}
+
+.aq-meta-value {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.aq-notice {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 6px;
+  border: 1px dashed var(--aq-border);
+  background: rgba(15, 13, 22, 0.55);
+  color: var(--aq-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
