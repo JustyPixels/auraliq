@@ -107,10 +107,10 @@
 
 ---
 
-## Milestone 11 — Additional Features (`0.8.0`)
+## Milestone 11 — Additional Features (`0.8.0`) [COMPLETED]
 
-- [ ] Optional opt-in LRCLIB synced/plain lyrics
-- [ ] Equalizer, ReplayGain, crossfade, gapless playback, advanced CRT/cassette visualizers
+- [x] Optional opt-in LRCLIB synced/plain lyrics + local `.lrc` sidecars
+- [x] Equalizer (5-band biquad DSP), ReplayGain, crossfade, gapless playback, advanced Dual VU & CRT Matrix visualizers
 
 ---
 

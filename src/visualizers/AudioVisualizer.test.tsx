@@ -32,6 +32,12 @@ describe("AudioVisualizer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cassette" }));
     expect(usePlayerStore.getState().visualizerStyle).toBe("cassette");
 
+    fireEvent.click(screen.getByRole("button", { name: "VU" }));
+    expect(usePlayerStore.getState().visualizerStyle).toBe("vu");
+
+    fireEvent.click(screen.getByRole("button", { name: "Matrix" }));
+    expect(usePlayerStore.getState().visualizerStyle).toBe("crt-matrix");
+
     fireEvent.click(screen.getByRole("button", { name: /Low-Performance Mode/i }));
     expect(usePlayerStore.getState().lowPerformanceVisualizer).toBe(true);
   });

@@ -70,6 +70,8 @@ export interface PlaybackSnapshot {
   muted: boolean;
   track_ended: boolean;
   last_error: string | null;
+  gapless_advanced?: boolean;
+  active_replay_gain_db?: number | null;
 }
 
 export interface PlaybackStateRecord {
@@ -102,7 +104,35 @@ export interface VisualizerFrame {
   peak: number;
 }
 
-export type VisualizerStyle = "bars" | "scope" | "cassette";
+export type VisualizerStyle = "bars" | "scope" | "cassette" | "vu" | "crt-matrix";
+
+export interface AudioEnhancementsConfig {
+  eq_enabled: boolean;
+  preamp_db: number;
+  bands_db: [number, number, number, number, number];
+  replay_gain_enabled: boolean;
+  replay_gain_preamp_db: number;
+  gapless_enabled: boolean;
+  crossfade_ms: number;
+}
+
+export interface SyncedLyricLine {
+  time_ms: number;
+  text: string;
+}
+
+export interface LyricsResult {
+  source: string;
+  instrumental: boolean;
+  plain_lyrics: string | null;
+  synced_lines: SyncedLyricLine[];
+  lrclib_enabled: boolean;
+}
+
+export interface LyricsSettingsRecord {
+  lrclib_enabled: boolean;
+  updated_at: number;
+}
 
 export interface SmartPlaylistRule {
   field: string;

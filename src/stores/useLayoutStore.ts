@@ -92,7 +92,8 @@ function readPersistedLayout(): PersistedLayoutState {
       rightPanelTab:
         parsed.rightPanelTab === "queue" ||
         parsed.rightPanelTab === "info" ||
-        parsed.rightPanelTab === "visualizer"
+        parsed.rightPanelTab === "visualizer" ||
+        parsed.rightPanelTab === "lyrics"
           ? parsed.rightPanelTab
           : "queue",
       uiDensity: parsed.uiDensity === "compact" ? "compact" : "comfortable",

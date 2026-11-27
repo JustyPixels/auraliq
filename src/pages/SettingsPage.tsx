@@ -4,6 +4,7 @@ import { isTauriRuntime } from "../api/backend";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { CustomCssEditor } from "../components/CustomCssEditor";
+import { EqualizerPanel } from "../components/EqualizerPanel";
 import { Panel } from "../components/Panel";
 import { Slider } from "../components/Slider";
 import { ThemeEditor } from "../components/ThemeEditor";
@@ -157,93 +158,101 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
       )}
 
       {activeTab === "playback" && (
-        <div className="aq-grid-2">
-          <Panel
-            title="Audio Output Device"
-            ledActive={inTauri}
-            headerActions={
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!inTauri}
-                title={!inTauri ? "Requires desktop Tauri runtime" : "Refresh output devices"}
-                onClick={() => void refreshAudioDevices()}
-              >
-                <RefreshCw size={14} />
-                Refresh
-              </Button>
-            }
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              <label htmlFor="aq-audio-device" className="aq-kv-label">
-                Selected Output Device
-              </label>
-              <select
-                id="aq-audio-device"
-                className="aq-select"
-                disabled={!inTauri}
-                value={selectedAudioDevice ?? ""}
-                onChange={(e) => void selectAudioDevice(e.target.value || null)}
-              >
-                <option value="">System Default</option>
-                {audioDevices.map((dev) => (
-                  <option key={dev.name} value={dev.name}>
-                    {dev.name} {dev.is_default ? "(Default)" : ""}
-                  </option>
-                ))}
-              </select>
-              <span style={{ fontSize: "0.78rem", color: "var(--aq-muted)" }}>
-                Automatic fallback to System Default activates if a selected device disconnects.
-              </span>
-            </div>
-          </Panel>
-
-          <Panel title="Notifications & Visualizer" ledActive>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-              <div className="aq-row-wrap">
+        <>
+          <div className="aq-grid-2">
+            <Panel
+              title="Audio Output Device"
+              ledActive={inTauri}
+              headerActions={
                 <Button
                   size="sm"
                   variant="secondary"
-                  active={notificationsEnabled}
-                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                  disabled={!inTauri}
+                  title={!inTauri ? "Requires desktop Tauri runtime" : "Refresh output devices"}
+                  onClick={() => void refreshAudioDevices()}
                 >
-                  Playback Notifications: {notificationsEnabled ? "On" : "Off"}
+                  <RefreshCw size={14} />
+                  Refresh
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  active={lowPerformanceVisualizer}
-                  onClick={() => setLowPerformanceVisualizer(!lowPerformanceVisualizer)}
+              }
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <label htmlFor="aq-audio-device" className="aq-kv-label">
+                  Selected Output Device
+                </label>
+                <select
+                  id="aq-audio-device"
+                  className="aq-select"
+                  disabled={!inTauri}
+                  value={selectedAudioDevice ?? ""}
+                  onChange={(e) => void selectAudioDevice(e.target.value || null)}
                 >
-                  Low-Performance Visualizer: {lowPerformanceVisualizer ? "On" : "Off"}
-                </Button>
-              </div>
-
-              <div className="aq-row-wrap">
-                <span className="aq-kv-label" style={{ margin: 0 }}>
-                  Visualizer Style:
+                  <option value="">System Default</option>
+                  {audioDevices.map((dev) => (
+                    <option key={dev.name} value={dev.name}>
+                      {dev.name} {dev.is_default ? "(Default)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: "0.78rem", color: "var(--aq-muted)" }}>
+                  Automatic fallback to System Default activates if a selected device disconnects.
                 </span>
-                {(
-                  [
-                    ["bars", "Retro Bars"],
-                    ["scope", "CRT Scope"],
-                    ["cassette", "Cassette Reels"],
-                  ] as readonly [VisualizerStyle, string][]
-                ).map(([id, label]) => (
+              </div>
+            </Panel>
+
+            <Panel title="Notifications & Visualizer" ledActive>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                <div className="aq-row-wrap">
                   <Button
-                    key={id}
                     size="sm"
                     variant="secondary"
-                    active={visualizerStyle === id}
-                    onClick={() => setVisualizerStyle(id)}
+                    active={notificationsEnabled}
+                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
                   >
-                    {label}
+                    Playback Notifications: {notificationsEnabled ? "On" : "Off"}
                   </Button>
-                ))}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    active={lowPerformanceVisualizer}
+                    onClick={() => setLowPerformanceVisualizer(!lowPerformanceVisualizer)}
+                  >
+                    Low-Performance Visualizer: {lowPerformanceVisualizer ? "On" : "Off"}
+                  </Button>
+                </div>
+
+                <div className="aq-row-wrap">
+                  <span className="aq-kv-label" style={{ margin: 0 }}>
+                    Visualizer Style:
+                  </span>
+                  {(
+                    [
+                      ["bars", "Retro Bars"],
+                      ["scope", "CRT Scope"],
+                      ["cassette", "Cassette Reels"],
+                      ["vu", "Dual VU"],
+                      ["crt-matrix", "CRT Matrix"],
+                    ] as readonly [VisualizerStyle, string][]
+                  ).map(([id, label]) => (
+                    <Button
+                      key={id}
+                      size="sm"
+                      variant="secondary"
+                      active={visualizerStyle === id}
+                      onClick={() => setVisualizerStyle(id)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
+            </Panel>
+          </div>
+
+          <Panel title="Equalizer, ReplayGain, Gapless & Lyrics" ledActive>
+            <EqualizerPanel />
           </Panel>
-        </div>
+        </>
       )}
 
       {activeTab === "layout" && (

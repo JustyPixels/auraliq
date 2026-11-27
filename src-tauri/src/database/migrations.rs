@@ -216,6 +216,27 @@ CREATE TABLE IF NOT EXISTS cache_settings (
 INSERT OR IGNORE INTO cache_settings (id) VALUES (1);
 "#;
 
+const MIGRATION_V5: &str = r#"
+CREATE TABLE IF NOT EXISTS lyrics_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    lrclib_enabled INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT OR IGNORE INTO lyrics_settings (id, lrclib_enabled, updated_at) VALUES (1, 0, 0);
+
+CREATE TABLE IF NOT EXISTS lyrics_cache (
+    cache_key TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    source TEXT NOT NULL,
+    instrumental INTEGER NOT NULL DEFAULT 0,
+    plain_lyrics TEXT,
+    synced_lyrics TEXT,
+    fetched_at INTEGER NOT NULL
+);
+"#;
+
 pub fn apply_migrations(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;")?;
     let current_version: i64 = conn.query_row("PRAGMA user_version;", [], |row| row.get(0))?;
@@ -245,6 +266,13 @@ pub fn apply_migrations(conn: &Connection) -> Result<(), AppError> {
         let tx = conn.unchecked_transaction()?;
         tx.execute_batch(MIGRATION_V4)?;
         tx.pragma_update(None, "user_version", 4i64)?;
+        tx.commit()?;
+    }
+
+    if current_version < 5 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(MIGRATION_V5)?;
+        tx.pragma_update(None, "user_version", 5i64)?;
         tx.commit()?;
     }
 

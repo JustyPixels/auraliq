@@ -11,10 +11,10 @@ use crate::metadata::identity::{
     evaluate_smart_playlist, find_duplicate_groups, suggest_identity_links,
 };
 use models::{
-    AlbumSummary, ArtistSummary, CacheEntryRecord, CacheSettings, CollectionRecord, DownloadRecord,
-    DownloadSettings, DuplicateGroup, GenreSummary, LibraryFolder, NewTrackData,
-    PlaybackStateRecord, PlaylistRecord, SearchFilters, SmartPlaylistRecord, SmartPlaylistRule,
-    TrackIdentityLink, TrackRecord,
+    AlbumSummary, ArtistSummary, CacheEntryRecord, CacheSettings, CachedLyricsRecord,
+    CollectionRecord, DownloadRecord, DownloadSettings, DuplicateGroup, GenreSummary,
+    LibraryFolder, LyricsSettingsRecord, NewTrackData, PlaybackStateRecord, PlaylistRecord,
+    SearchFilters, SmartPlaylistRecord, SmartPlaylistRule, TrackIdentityLink, TrackRecord,
 };
 
 pub struct Database {
@@ -1159,6 +1159,86 @@ impl Database {
             ],
         )?;
         Ok(())
+    }
+
+    pub fn get_lyrics_settings(&self) -> Result<LyricsSettingsRecord, AppError> {
+        self.conn
+            .query_row(
+                "SELECT lrclib_enabled, updated_at FROM lyrics_settings WHERE id = 1",
+                [],
+                |row| {
+                    Ok(LyricsSettingsRecord {
+                        lrclib_enabled: row.get::<_, i64>(0)? != 0,
+                        updated_at: row.get(1)?,
+                    })
+                },
+            )
+            .map_err(Into::into)
+    }
+
+    pub fn set_lrclib_enabled(&self, enabled: bool) -> Result<LyricsSettingsRecord, AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "UPDATE lyrics_settings SET lrclib_enabled = ?1, updated_at = ?2 WHERE id = 1",
+            params![i64::from(enabled), now],
+        )?;
+        self.get_lyrics_settings()
+    }
+
+    pub fn get_cached_lyrics(
+        &self,
+        cache_key: &str,
+    ) -> Result<Option<CachedLyricsRecord>, AppError> {
+        self.conn
+            .query_row(
+                "SELECT cache_key, title, artist, source, instrumental, plain_lyrics, synced_lyrics, fetched_at
+                 FROM lyrics_cache WHERE cache_key = ?1",
+                params![cache_key],
+                |row| {
+                    Ok(CachedLyricsRecord {
+                        cache_key: row.get(0)?,
+                        title: row.get(1)?,
+                        artist: row.get(2)?,
+                        source: row.get(3)?,
+                        instrumental: row.get::<_, i64>(4)? != 0,
+                        plain_lyrics: row.get(5)?,
+                        synced_lyrics: row.get(6)?,
+                        fetched_at: row.get(7)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    pub fn upsert_cached_lyrics(&self, rec: &CachedLyricsRecord) -> Result<(), AppError> {
+        self.conn.execute(
+            "INSERT INTO lyrics_cache (
+                cache_key, title, artist, source, instrumental, plain_lyrics, synced_lyrics, fetched_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            ON CONFLICT(cache_key) DO UPDATE SET
+                source = excluded.source,
+                instrumental = excluded.instrumental,
+                plain_lyrics = excluded.plain_lyrics,
+                synced_lyrics = excluded.synced_lyrics,
+                fetched_at = excluded.fetched_at",
+            params![
+                rec.cache_key,
+                rec.title,
+                rec.artist,
+                rec.source,
+                i64::from(rec.instrumental),
+                rec.plain_lyrics,
+                rec.synced_lyrics,
+                rec.fetched_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn clear_lyrics_cache(&self) -> Result<usize, AppError> {
+        let count = self.conn.execute("DELETE FROM lyrics_cache", [])?;
+        Ok(count)
     }
 }
 

@@ -5,6 +5,15 @@ All notable changes to **Auraliq** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-11-27
+
+### Added
+
+- **Milestone 11 (Additional Features)**:
+  - **5-Band Graphic Equalizer & ReplayGain DSP** (`src-tauri/src/audio/dsp.rs`): Stereo biquad IIR filters (60 Hz, 230 Hz, 910 Hz, 3.6 kHz, 14 kHz), preamp, 6 EQ presets, ReplayGain tag parsing (`lofty`), **Gapless Playback** preloading, and configurable **Crossfade** (`0–8s`).
+  - **Optional Opt-In Lyrics** (`src-tauri/src/lyrics/`): Offline local `.lrc` sidecar loading plus opt-in LRCLIB synced/plain lyrics with SQLite caching (migration v5) and click-to-seek `LyricsPanel` in `RightPanel`.
+  - **Advanced Retro Visualizers**: Segmented 90s LED Bars, CRT graticule Scope, dual-VU Cassette Deck, **Dual Analog VU Meters**, and **CRT Matrix**.
+
 ## [0.7.0] - 2026-11-27
 
 ### Changed

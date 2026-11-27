@@ -1,3 +1,4 @@
+pub mod dsp;
 pub mod fft;
 pub mod resampler;
 
@@ -24,6 +25,9 @@ use symphonia::core::units::Time;
 use symphonia::default::{get_codecs, get_probe};
 
 use crate::error::AppError;
+use crate::metadata::read_replay_gain_db;
+pub use dsp::AudioEnhancementsConfig;
+use dsp::{mix_crossfade_buffers, EqualizerProcessor};
 pub use fft::{SpectrumAnalyzer, VisualizerFrame, FFT_SIZE};
 use resampler::resample_to_stereo;
 
@@ -61,6 +65,8 @@ pub struct PlaybackSnapshot {
     pub track_ended: bool,
     pub output_device: Option<String>,
     pub last_error: Option<String>,
+    pub gapless_advanced: bool,
+    pub active_replay_gain_db: Option<f32>,
 }
 
 impl Default for PlaybackSnapshot {
@@ -75,6 +81,8 @@ impl Default for PlaybackSnapshot {
             track_ended: false,
             output_device: None,
             last_error: None,
+            gapless_advanced: false,
+            active_replay_gain_db: None,
         }
     }
 }
@@ -82,6 +90,8 @@ impl Default for PlaybackSnapshot {
 enum AudioCommand {
     LoadAndPlay { path: String, start_ms: u64 },
     LoadAndPlayUrl { url: String },
+    PreloadNext { path: String },
+    UpdateEnhancements(AudioEnhancementsConfig),
     Play,
     Pause,
     Stop,
@@ -93,6 +103,7 @@ pub struct AudioEngine {
     tx: Sender<AudioCommand>,
     snapshot: Arc<Mutex<PlaybackSnapshot>>,
     visualizer: Arc<Mutex<VisualizerFrame>>,
+    enhancements: Arc<Mutex<AudioEnhancementsConfig>>,
     volume_bits: Arc<AtomicU32>,
     muted: Arc<AtomicBool>,
 }
@@ -393,10 +404,53 @@ fn reset_visualizer(visualizer: &Arc<Mutex<VisualizerFrame>>) {
     }
 }
 
+fn decode_next_stereo(loaded: &mut LoadedDecoder, dst_rate: u32) -> Option<Result<Vec<f32>, bool>> {
+    loop {
+        match loaded.format.next_packet() {
+            Ok(packet) => {
+                if packet.track_id() != loaded.track_id {
+                    continue;
+                }
+                match loaded.decoder.decode(&packet) {
+                    Ok(decoded) => {
+                        let spec = *decoded.spec();
+                        let mut sbuf = SampleBuffer::<f32>::new(decoded.capacity() as u64, spec);
+                        sbuf.copy_interleaved_ref(decoded);
+                        return Some(Ok(resample_to_stereo(
+                            sbuf.samples(),
+                            loaded.src_channels,
+                            loaded.src_rate,
+                            dst_rate,
+                        )));
+                    }
+                    Err(SymphoniaError::DecodeError(_)) => continue,
+                    Err(_) => return Some(Err(true)),
+                }
+            }
+            Err(_) => return Some(Err(true)),
+        }
+    }
+}
+
+struct PreloadedTrack {
+    path: String,
+    decoder: LoadedDecoder,
+    replay_gain_db: Option<f32>,
+}
+
+struct CrossfadeState {
+    incoming: LoadedDecoder,
+    incoming_path: String,
+    incoming_rg_db: Option<f32>,
+    fade_frame: usize,
+    total_fade_frames: usize,
+}
+
 fn audio_worker_loop(
     rx: Receiver<AudioCommand>,
     snapshot: Arc<Mutex<PlaybackSnapshot>>,
     visualizer: Arc<Mutex<VisualizerFrame>>,
+    enhancements_shared: Arc<Mutex<AudioEnhancementsConfig>>,
     volume_bits: Arc<AtomicU32>,
     muted_flag: Arc<AtomicBool>,
 ) {
@@ -407,9 +461,17 @@ fn audio_worker_loop(
     let mut preferred_device: Option<String> = None;
     let mut output_stream: Option<(Stream, u32)> = None;
     let mut active_decoder: Option<LoadedDecoder> = None;
+    let mut active_rg_db: Option<f32> = None;
+    let mut preloaded: Option<PreloadedTrack> = None;
+    let mut crossfade: Option<CrossfadeState> = None;
     let mut eof_reached = false;
     let mut decoded_frames_played: u64 = 0;
 
+    let mut enhancements = enhancements_shared
+        .lock()
+        .map(|g| g.clone())
+        .unwrap_or_default();
+    let mut eq = EqualizerProcessor::new();
     let mut analyzer = SpectrumAnalyzer::new();
     let mut mono_ring: VecDeque<f32> = VecDeque::with_capacity(FFT_SIZE * 2);
 
@@ -475,6 +537,10 @@ fn audio_worker_loop(
                     }
                     mono_ring.clear();
                     active_decoder = None;
+                    active_rg_db = None;
+                    preloaded = None;
+                    crossfade = None;
+                    eq.reset();
                     eof_reached = false;
 
                     if output_stream.is_none() {
@@ -521,6 +587,8 @@ fn audio_worker_loop(
                                 output_stream.as_ref().map(|(_, r)| *r).unwrap_or(44_100);
                             decoded_frames_played = (start_ms * u64::from(dst_rate)) / 1000;
 
+                            let rg_db = read_replay_gain_db(Path::new(&path));
+                            active_rg_db = rg_db;
                             if let Ok(mut snap) = snapshot.lock() {
                                 snap.status = "playing".to_string();
                                 snap.current_path = Some(path);
@@ -528,6 +596,8 @@ fn audio_worker_loop(
                                 snap.duration_ms = loaded.duration_ms;
                                 snap.track_ended = false;
                                 snap.last_error = None;
+                                snap.gapless_advanced = false;
+                                snap.active_replay_gain_db = rg_db;
                             }
                             active_decoder = Some(loaded);
                             playing_flag.store(true, Ordering::Relaxed);
@@ -550,6 +620,10 @@ fn audio_worker_loop(
                     }
                     mono_ring.clear();
                     active_decoder = None;
+                    active_rg_db = None;
+                    preloaded = None;
+                    crossfade = None;
+                    eq.reset();
                     eof_reached = false;
 
                     if output_stream.is_none() {
@@ -589,6 +663,8 @@ fn audio_worker_loop(
                                 snap.duration_ms = loaded.duration_ms;
                                 snap.track_ended = false;
                                 snap.last_error = None;
+                                snap.gapless_advanced = false;
+                                snap.active_replay_gain_db = None;
                             }
                             active_decoder = Some(loaded);
                             playing_flag.store(true, Ordering::Relaxed);
@@ -603,6 +679,19 @@ fn audio_worker_loop(
                             }
                         }
                     }
+                }
+                AudioCommand::PreloadNext { path } => {
+                    if let Ok(dec) = open_symphonia_decoder(Path::new(&path)) {
+                        let rg = read_replay_gain_db(Path::new(&path));
+                        preloaded = Some(PreloadedTrack {
+                            path,
+                            decoder: dec,
+                            replay_gain_db: rg,
+                        });
+                    }
+                }
+                AudioCommand::UpdateEnhancements(cfg) => {
+                    enhancements = cfg;
                 }
                 AudioCommand::Play => {
                     if active_decoder.is_some() {
@@ -624,6 +713,10 @@ fn audio_worker_loop(
                 AudioCommand::Stop => {
                     playing_flag.store(false, Ordering::Relaxed);
                     active_decoder = None;
+                    active_rg_db = None;
+                    preloaded = None;
+                    crossfade = None;
+                    eq.reset();
                     eof_reached = false;
                     decoded_frames_played = 0;
                     mono_ring.clear();
@@ -677,50 +770,141 @@ fn audio_worker_loop(
 
             if !eof_reached && queued_len < max_buffered_samples / 2 {
                 if let Some(ref mut loaded) = active_decoder {
-                    match loaded.format.next_packet() {
-                        Ok(packet) => {
-                            if packet.track_id() == loaded.track_id {
-                                match loaded.decoder.decode(&packet) {
-                                    Ok(decoded) => {
-                                        let spec = *decoded.spec();
-                                        let mut sbuf = SampleBuffer::<f32>::new(
-                                            decoded.capacity() as u64,
-                                            spec,
-                                        );
-                                        sbuf.copy_interleaved_ref(decoded);
-                                        let stereo = resample_to_stereo(
-                                            sbuf.samples(),
-                                            loaded.src_channels,
-                                            loaded.src_rate,
+                    // Trigger crossfade if configured and approaching track end
+                    if crossfade.is_none()
+                        && enhancements.crossfade_ms > 0
+                        && loaded.duration_ms > u64::from(enhancements.crossfade_ms) + 500
+                    {
+                        let current_pos_ms =
+                            (decoded_frames_played * 1000) / u64::from(dst_rate.max(1));
+                        let fade_start_ms = loaded
+                            .duration_ms
+                            .saturating_sub(u64::from(enhancements.crossfade_ms));
+                        if current_pos_ms >= fade_start_ms {
+                            if let Some(next_track) = preloaded.take() {
+                                let total_fade_frames =
+                                    ((u64::from(enhancements.crossfade_ms) * u64::from(dst_rate))
+                                        / 1000)
+                                        .max(1) as usize;
+                                crossfade = Some(CrossfadeState {
+                                    incoming: next_track.decoder,
+                                    incoming_path: next_track.path,
+                                    incoming_rg_db: next_track.replay_gain_db,
+                                    fade_frame: 0,
+                                    total_fade_frames,
+                                });
+                            }
+                        }
+                    }
+
+                    match decode_next_stereo(loaded, dst_rate) {
+                        Some(Ok(mut stereo)) => {
+                            eq.process_stereo(&mut stereo, dst_rate, &enhancements, active_rg_db);
+
+                            let output_chunk = if let Some(ref mut xf) = crossfade {
+                                match decode_next_stereo(&mut xf.incoming, dst_rate) {
+                                    Some(Ok(mut inc_stereo)) => {
+                                        eq.process_stereo(
+                                            &mut inc_stereo,
                                             dst_rate,
+                                            &enhancements,
+                                            xf.incoming_rg_db,
                                         );
-                                        for pair in stereo.as_chunks::<2>().0 {
-                                            mono_ring.push_back((pair[0] + pair[1]) * 0.5);
-                                            if mono_ring.len() > FFT_SIZE {
-                                                mono_ring.pop_front();
-                                            }
-                                        }
-                                        if mono_ring.len() == FFT_SIZE {
-                                            let slice: Vec<f32> =
-                                                mono_ring.iter().copied().collect();
-                                            let frame = analyzer.analyze(&slice);
-                                            if let Ok(mut vis) = visualizer.lock() {
-                                                *vis = frame;
-                                            }
-                                        }
-                                        let added_frames = (stereo.len() / 2) as u64;
-                                        if let Ok(mut q) = pcm_queue.lock() {
-                                            q.extend(stereo);
-                                        }
-                                        decoded_frames_played += added_frames;
+                                        let mixed = mix_crossfade_buffers(
+                                            &stereo,
+                                            &inc_stereo,
+                                            xf.fade_frame,
+                                            xf.total_fade_frames,
+                                        );
+                                        xf.fade_frame += mixed.len() / 2;
+                                        mixed
                                     }
-                                    Err(SymphoniaError::DecodeError(_)) => {}
-                                    Err(_) => eof_reached = true,
+                                    _ => stereo,
+                                }
+                            } else {
+                                stereo
+                            };
+
+                            for pair in output_chunk.as_chunks::<2>().0 {
+                                mono_ring.push_back((pair[0] + pair[1]) * 0.5);
+                                if mono_ring.len() > FFT_SIZE {
+                                    mono_ring.pop_front();
+                                }
+                            }
+                            if mono_ring.len() == FFT_SIZE {
+                                let slice: Vec<f32> = mono_ring.iter().copied().collect();
+                                let frame = analyzer.analyze(&slice);
+                                if let Ok(mut vis) = visualizer.lock() {
+                                    *vis = frame;
+                                }
+                            }
+                            let added_frames = (output_chunk.len() / 2) as u64;
+                            if let Ok(mut q) = pcm_queue.lock() {
+                                q.extend(output_chunk);
+                            }
+                            decoded_frames_played += added_frames;
+
+                            if let Some(xf) = crossfade.as_ref() {
+                                if xf.fade_frame >= xf.total_fade_frames {
+                                    let finished_xf = crossfade.take().unwrap();
+                                    let remaining_frames =
+                                        pcm_queue.lock().map(|q| (q.len() / 2) as u64).unwrap_or(0);
+                                    let new_dur = finished_xf.incoming.duration_ms;
+                                    let new_rg = finished_xf.incoming_rg_db;
+                                    active_decoder = Some(finished_xf.incoming);
+                                    active_rg_db = new_rg;
+                                    decoded_frames_played = remaining_frames;
+                                    eof_reached = false;
+                                    if let Ok(mut snap) = snapshot.lock() {
+                                        snap.current_path = Some(finished_xf.incoming_path);
+                                        snap.duration_ms = new_dur;
+                                        snap.position_ms = 0;
+                                        snap.gapless_advanced = true;
+                                        snap.active_replay_gain_db = new_rg;
+                                    }
                                 }
                             }
                         }
-                        Err(_) => {
-                            eof_reached = true;
+                        _ => {
+                            if let Some(finished_xf) = crossfade.take() {
+                                let remaining_frames =
+                                    pcm_queue.lock().map(|q| (q.len() / 2) as u64).unwrap_or(0);
+                                let new_dur = finished_xf.incoming.duration_ms;
+                                let new_rg = finished_xf.incoming_rg_db;
+                                active_decoder = Some(finished_xf.incoming);
+                                active_rg_db = new_rg;
+                                decoded_frames_played = remaining_frames;
+                                eof_reached = false;
+                                if let Ok(mut snap) = snapshot.lock() {
+                                    snap.current_path = Some(finished_xf.incoming_path);
+                                    snap.duration_ms = new_dur;
+                                    snap.position_ms = 0;
+                                    snap.gapless_advanced = true;
+                                    snap.active_replay_gain_db = new_rg;
+                                }
+                            } else if enhancements.gapless_enabled {
+                                if let Some(next_track) = preloaded.take() {
+                                    let remaining_frames =
+                                        pcm_queue.lock().map(|q| (q.len() / 2) as u64).unwrap_or(0);
+                                    let new_dur = next_track.decoder.duration_ms;
+                                    let new_rg = next_track.replay_gain_db;
+                                    active_decoder = Some(next_track.decoder);
+                                    active_rg_db = new_rg;
+                                    decoded_frames_played = remaining_frames;
+                                    eof_reached = false;
+                                    if let Ok(mut snap) = snapshot.lock() {
+                                        snap.current_path = Some(next_track.path);
+                                        snap.duration_ms = new_dur;
+                                        snap.position_ms = 0;
+                                        snap.gapless_advanced = true;
+                                        snap.active_replay_gain_db = new_rg;
+                                    }
+                                } else {
+                                    eof_reached = true;
+                                }
+                            } else {
+                                eof_reached = true;
+                            }
                         }
                     }
                 }
@@ -753,18 +937,20 @@ impl AudioEngine {
         let (tx, rx) = mpsc::channel();
         let snapshot = Arc::new(Mutex::new(PlaybackSnapshot::default()));
         let visualizer = Arc::new(Mutex::new(VisualizerFrame::default()));
+        let enhancements = Arc::new(Mutex::new(AudioEnhancementsConfig::default()));
         let volume_bits = Arc::new(AtomicU32::new(0.8f32.to_bits()));
         let muted = Arc::new(AtomicBool::new(false));
 
         let snap_clone = Arc::clone(&snapshot);
         let vis_clone = Arc::clone(&visualizer);
+        let enh_clone = Arc::clone(&enhancements);
         let vol_clone = Arc::clone(&volume_bits);
         let mute_clone = Arc::clone(&muted);
 
         thread::Builder::new()
             .name("auraliq-audio".to_string())
             .spawn(move || {
-                audio_worker_loop(rx, snap_clone, vis_clone, vol_clone, mute_clone);
+                audio_worker_loop(rx, snap_clone, vis_clone, enh_clone, vol_clone, mute_clone);
             })
             .expect("failed to spawn audio worker thread");
 
@@ -772,9 +958,33 @@ impl AudioEngine {
             tx,
             snapshot,
             visualizer,
+            enhancements,
             volume_bits,
             muted,
         }
+    }
+
+    pub fn preload_next(&self, path: String) -> Result<(), AppError> {
+        self.tx
+            .send(AudioCommand::PreloadNext { path })
+            .map_err(|e| AppError::Audio(e.to_string()))
+    }
+
+    pub fn set_enhancements(&self, cfg: AudioEnhancementsConfig) -> Result<(), AppError> {
+        let clamped = cfg.clamped();
+        if let Ok(mut guard) = self.enhancements.lock() {
+            *guard = clamped.clone();
+        }
+        self.tx
+            .send(AudioCommand::UpdateEnhancements(clamped))
+            .map_err(|e| AppError::Audio(e.to_string()))
+    }
+
+    pub fn get_enhancements(&self) -> AudioEnhancementsConfig {
+        self.enhancements
+            .lock()
+            .map(|g| g.clone())
+            .unwrap_or_default()
     }
 
     pub fn load_and_play(&self, path: String, start_ms: u64) -> Result<(), AppError> {
@@ -835,7 +1045,14 @@ impl AudioEngine {
     }
 
     pub fn snapshot(&self) -> PlaybackSnapshot {
-        self.snapshot.lock().map(|s| s.clone()).unwrap_or_default()
+        self.snapshot
+            .lock()
+            .map(|mut s| {
+                let out = s.clone();
+                s.gapless_advanced = false;
+                out
+            })
+            .unwrap_or_default()
     }
 
     pub fn visualizer_frame(&self) -> VisualizerFrame {

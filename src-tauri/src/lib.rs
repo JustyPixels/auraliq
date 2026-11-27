@@ -5,6 +5,7 @@ pub mod database;
 pub mod downloads;
 pub mod error;
 pub mod library;
+pub mod lyrics;
 pub mod metadata;
 pub mod platform;
 pub mod providers;
@@ -122,6 +123,13 @@ pub fn run() {
             commands::player::get_visualizer_frame,
             commands::player::load_playback_state,
             commands::player::save_playback_state,
+            commands::player::get_audio_enhancements,
+            commands::player::set_audio_enhancements,
+            commands::player::preload_next_track,
+            commands::lyrics::get_lyrics_settings,
+            commands::lyrics::set_lrclib_enabled,
+            commands::lyrics::clear_lyrics_cache,
+            commands::lyrics::get_track_lyrics,
             commands::providers::list_providers,
             commands::providers::set_provider_enabled,
             commands::providers::save_provider_credential,

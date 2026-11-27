@@ -12,10 +12,13 @@ import type {
   AlbumSummary,
   ArtistSummary,
   AudioDeviceInfo,
+  AudioEnhancementsConfig,
   CollectionRecord,
   DuplicateGroup,
   GenreSummary,
   LibraryFolder,
+  LyricsResult,
+  LyricsSettingsRecord,
   PlaybackSnapshot,
   PlaybackStateRecord,
   PlaylistRecord,
@@ -169,6 +172,29 @@ export const backendApi = {
   loadPlaybackState: () => invoke<PlaybackStateRecord>("load_playback_state"),
   savePlaybackState: (playbackState: PlaybackStateRecord) =>
     invoke<void>("save_playback_state", { playbackState }),
+  getAudioEnhancements: () => invoke<AudioEnhancementsConfig>("get_audio_enhancements"),
+  setAudioEnhancements: (config: AudioEnhancementsConfig) =>
+    invoke<AudioEnhancementsConfig>("set_audio_enhancements", { config }),
+  preloadNextTrack: (trackId: number) => invoke<void>("preload_next_track", { trackId }),
+
+  getLyricsSettings: () => invoke<LyricsSettingsRecord>("get_lyrics_settings"),
+  setLrclibEnabled: (enabled: boolean) =>
+    invoke<LyricsSettingsRecord>("set_lrclib_enabled", { enabled }),
+  clearLyricsCache: () => invoke<number>("clear_lyrics_cache"),
+  getTrackLyrics: (
+    title: string,
+    artist: string,
+    album: string,
+    durationMs: number,
+    filePath: string | null,
+  ) =>
+    invoke<LyricsResult>("get_track_lyrics", {
+      title,
+      artist,
+      album,
+      durationMs,
+      filePath,
+    }),
 
   listProviders: () => invoke<ProviderInfo[]>("list_providers"),
   setProviderEnabled: (providerId: string, enabled: boolean) =>

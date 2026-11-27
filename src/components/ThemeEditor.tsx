@@ -231,6 +231,8 @@ export function ThemeEditor() {
                 ["bars", "Retro Bars"],
                 ["scope", "CRT Scope"],
                 ["cassette", "Cassette"],
+                ["vu", "Dual VU"],
+                ["crt-matrix", "CRT Matrix"],
               ] as readonly [VisualizerStyle, string][]
             ).map(([id, label]) => (
               <Button

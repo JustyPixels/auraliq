@@ -228,3 +228,21 @@ pub struct CacheStats {
     pub offline_mode: bool,
     pub cache_dir: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LyricsSettingsRecord {
+    pub lrclib_enabled: bool,
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedLyricsRecord {
+    pub cache_key: String,
+    pub title: String,
+    pub artist: String,
+    pub source: String,
+    pub instrumental: bool,
+    pub plain_lyrics: Option<String>,
+    pub synced_lyrics: Option<String>,
+    pub fetched_at: i64,
+}

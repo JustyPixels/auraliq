@@ -8,7 +8,7 @@ use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::picture::{MimeType, PictureType};
 use lofty::probe::read_from_path;
-use lofty::tag::{Accessor, Tag, TagExt};
+use lofty::tag::{Accessor, ItemKey, Tag, TagExt};
 use sha2::{Digest, Sha256};
 
 use crate::database::models::NewTrackData;
@@ -193,4 +193,18 @@ pub fn write_track_tags(
             .map_err(|e| AppError::Metadata(e.to_string()))?;
     }
     Ok(())
+}
+
+pub fn read_replay_gain_db(path: &Path) -> Option<f32> {
+    let tagged_file = read_from_path(path).ok()?;
+    for tag in tagged_file.tags() {
+        for key in [ItemKey::ReplayGainTrackGain, ItemKey::ReplayGainAlbumGain] {
+            if let Some(val) = tag.get_string(key) {
+                if let Some(db) = crate::audio::dsp::parse_replay_gain_db(val) {
+                    return Some(db);
+                }
+            }
+        }
+    }
+    None
 }

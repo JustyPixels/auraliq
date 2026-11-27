@@ -3,10 +3,11 @@ import { formatDurationMs } from "../api/backend";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
+import { LyricsPanel } from "../components/LyricsPanel";
 import { usePlayerStore } from "../stores/usePlayerStore";
 import { AudioVisualizer } from "../visualizers/AudioVisualizer";
 
-export type RightPanelTab = "queue" | "info" | "visualizer";
+export type RightPanelTab = "queue" | "info" | "visualizer" | "lyrics";
 
 interface RightPanelProps {
   activeTab: RightPanelTab;
@@ -58,6 +59,16 @@ export function RightPanel({ activeTab, onSelectTab, onClose }: RightPanelProps)
             onClick={() => onSelectTab("visualizer")}
           >
             Scope
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            active={activeTab === "lyrics"}
+            role="tab"
+            aria-selected={activeTab === "lyrics"}
+            onClick={() => onSelectTab("lyrics")}
+          >
+            Lyrics
           </Button>
         </div>
 
@@ -178,6 +189,7 @@ export function RightPanel({ activeTab, onSelectTab, onClose }: RightPanelProps)
           ))}
 
         {activeTab === "visualizer" && <AudioVisualizer />}
+        {activeTab === "lyrics" && <LyricsPanel />}
       </div>
     </aside>
   );

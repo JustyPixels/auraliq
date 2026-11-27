@@ -1,6 +1,7 @@
 pub mod cache;
 pub mod downloads;
 pub mod library;
+pub mod lyrics;
 pub mod player;
 pub mod playlists;
 pub mod providers;

@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { backendApi, isTauriRuntime } from "../api/backend";
-import type { AudioDeviceInfo, RepeatMode, TrackRecord, VisualizerStyle } from "../types/music";
+import type {
+  AudioDeviceInfo,
+  AudioEnhancementsConfig,
+  RepeatMode,
+  TrackRecord,
+  VisualizerStyle,
+} from "../types/music";
 import type { OnlineTrack } from "../types/providers";
 
 export type QueuedTrack = TrackRecord & {
@@ -23,6 +29,55 @@ interface PlaybackPrefs {
 }
 
 const PREFS_KEY = "auraliq.playbackPrefs.v1";
+const ENHANCEMENTS_KEY = "auraliq.audioEnhancements.v1";
+
+export const DEFAULT_AUDIO_ENHANCEMENTS: AudioEnhancementsConfig = {
+  eq_enabled: false,
+  preamp_db: 0,
+  bands_db: [0, 0, 0, 0, 0],
+  replay_gain_enabled: false,
+  replay_gain_preamp_db: 0,
+  gapless_enabled: true,
+  crossfade_ms: 0,
+};
+
+function readEnhancements(): AudioEnhancementsConfig {
+  try {
+    if (typeof localStorage === "undefined") {
+      return DEFAULT_AUDIO_ENHANCEMENTS;
+    }
+    const raw = localStorage.getItem(ENHANCEMENTS_KEY);
+    if (!raw) {
+      return DEFAULT_AUDIO_ENHANCEMENTS;
+    }
+    const parsed = JSON.parse(raw) as Partial<AudioEnhancementsConfig>;
+    return {
+      eq_enabled: Boolean(parsed.eq_enabled),
+      preamp_db: typeof parsed.preamp_db === "number" ? parsed.preamp_db : 0,
+      bands_db:
+        Array.isArray(parsed.bands_db) && parsed.bands_db.length === 5
+          ? (parsed.bands_db as [number, number, number, number, number])
+          : [0, 0, 0, 0, 0],
+      replay_gain_enabled: Boolean(parsed.replay_gain_enabled),
+      replay_gain_preamp_db:
+        typeof parsed.replay_gain_preamp_db === "number" ? parsed.replay_gain_preamp_db : 0,
+      gapless_enabled: typeof parsed.gapless_enabled === "boolean" ? parsed.gapless_enabled : true,
+      crossfade_ms: typeof parsed.crossfade_ms === "number" ? parsed.crossfade_ms : 0,
+    };
+  } catch {
+    return DEFAULT_AUDIO_ENHANCEMENTS;
+  }
+}
+
+function writeEnhancements(cfg: AudioEnhancementsConfig): void {
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(ENHANCEMENTS_KEY, JSON.stringify(cfg));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 function readPrefs(): PlaybackPrefs {
   const defaults: PlaybackPrefs = {
@@ -44,7 +99,10 @@ function readPrefs(): PlaybackPrefs {
       notificationsEnabled:
         typeof parsed.notificationsEnabled === "boolean" ? parsed.notificationsEnabled : true,
       visualizerStyle:
-        parsed.visualizerStyle === "scope" || parsed.visualizerStyle === "cassette"
+        parsed.visualizerStyle === "scope" ||
+        parsed.visualizerStyle === "cassette" ||
+        parsed.visualizerStyle === "vu" ||
+        parsed.visualizerStyle === "crt-matrix"
           ? parsed.visualizerStyle
           : "bars",
       lowPerformanceVisualizer: Boolean(parsed.lowPerformanceVisualizer),
@@ -80,6 +138,9 @@ export interface PlayerStore extends PlaybackPrefs {
   error: string | null;
   audioDevices: AudioDeviceInfo[];
   toastMessage: PlaybackToastMessage | null;
+  audioEnhancements: AudioEnhancementsConfig;
+  lrclibEnabled: boolean;
+  activeReplayGainDb: number | null;
   hydrate: (tracks: TrackRecord[]) => Promise<void>;
   playTrackList: (tracks: TrackRecord[], startIndex?: number) => Promise<void>;
   playOnlineTrackList: (tracks: OnlineTrack[], startIndex?: number) => Promise<void>;
@@ -106,6 +167,8 @@ export interface PlayerStore extends PlaybackPrefs {
   setNotificationsEnabled: (enabled: boolean) => void;
   setVisualizerStyle: (style: VisualizerStyle) => void;
   setLowPerformanceVisualizer: (enabled: boolean) => void;
+  setAudioEnhancements: (config: AudioEnhancementsConfig) => Promise<void>;
+  setLrclibEnabled: (enabled: boolean) => Promise<void>;
   dismissToast: () => void;
   persistState: () => void;
 }
@@ -156,6 +219,21 @@ function onlineToQueuedTrack(track: OnlineTrack, idx: number): QueuedTrack {
 }
 
 const initialPrefs = readPrefs();
+const initialEnhancements = readEnhancements();
+
+function preloadNextLocalTrack(
+  queue: QueuedTrack[],
+  currentIndex: number,
+  enhancements: AudioEnhancementsConfig,
+): void {
+  if (!isTauriRuntime() || (!enhancements.gapless_enabled && enhancements.crossfade_ms === 0)) {
+    return;
+  }
+  const next = queue[currentIndex + 1];
+  if (next && next.id > 0 && !next.onlineMeta) {
+    void backendApi.preloadNextTrack(next.id).catch(() => {});
+  }
+}
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
   ...initialPrefs,
@@ -172,6 +250,9 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   error: null,
   audioDevices: [],
   toastMessage: null,
+  audioEnhancements: initialEnhancements,
+  lrclibEnabled: false,
+  activeReplayGainDb: null,
 
   persistState: () => {
     if (!isTauriRuntime()) {
@@ -221,6 +302,20 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         await backendApi.setAudioDevice(preferredDev);
       }
 
+      try {
+        await backendApi.setAudioEnhancements(get().audioEnhancements);
+      } catch {
+        // Ignore in mocked/legacy environments
+      }
+      try {
+        const lyricsCfg = await backendApi.getLyricsSettings();
+        if (lyricsCfg && typeof lyricsCfg.lrclib_enabled === "boolean") {
+          set({ lrclibEnabled: lyricsCfg.lrclib_enabled });
+        }
+      } catch {
+        // Ignore in mocked/legacy environments
+      }
+
       set({
         queue,
         queueIndex,
@@ -260,6 +355,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     if (isTauriRuntime()) {
       try {
         await backendApi.playTrack(target.id, 0);
+        preloadNextLocalTrack(tracks, idx, get().audioEnhancements);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         set({
@@ -329,6 +425,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
           await backendApi.resolveAndPlayOnlineTrack(target.onlineMeta);
         } else {
           await backendApi.playTrack(target.id, 0);
+          preloadNextLocalTrack(queue, index, get().audioEnhancements);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -578,10 +675,38 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       const snap = await backendApi.getPlaybackStatus();
       const nextStatus = normalizeStatus(snap.status);
       const prevError = get().error;
+
+      if (snap.gapless_advanced) {
+        const { queue, queueIndex, notificationsEnabled, audioEnhancements } = get();
+        const nextIdx = queueIndex + 1;
+        if (nextIdx >= 0 && nextIdx < queue.length) {
+          const nextTrack = queue[nextIdx];
+          set({
+            queueIndex: nextIdx,
+            currentTrack: nextTrack,
+            status: nextStatus,
+            positionMs: snap.position_ms,
+            durationMs: snap.duration_ms > 0 ? snap.duration_ms : nextTrack.duration_ms,
+            activeReplayGainDb: snap.active_replay_gain_db ?? null,
+            toastMessage: notificationsEnabled
+              ? {
+                  title: nextTrack.title,
+                  subtitle: `${nextTrack.artist} • ${nextTrack.album}`,
+                  tone: "accent",
+                }
+              : get().toastMessage,
+          });
+          preloadNextLocalTrack(queue, nextIdx, audioEnhancements);
+          get().persistState();
+          return;
+        }
+      }
+
       set({
         status: nextStatus,
         positionMs: snap.position_ms,
         durationMs: snap.duration_ms > 0 ? snap.duration_ms : get().durationMs,
+        activeReplayGainDb: snap.active_replay_gain_db ?? get().activeReplayGainDb,
         error: snap.last_error,
         toastMessage:
           snap.last_error && snap.last_error !== prevError
@@ -641,6 +766,28 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       writePrefs(pickPrefs(next));
       return { lowPerformanceVisualizer };
     });
+  },
+
+  setAudioEnhancements: async (config) => {
+    writeEnhancements(config);
+    set({ audioEnhancements: config });
+    if (isTauriRuntime()) {
+      const saved = await backendApi.setAudioEnhancements(config);
+      writeEnhancements(saved);
+      set({ audioEnhancements: saved });
+      const { queue, queueIndex } = get();
+      if (queueIndex >= 0) {
+        preloadNextLocalTrack(queue, queueIndex, saved);
+      }
+    }
+  },
+
+  setLrclibEnabled: async (enabled) => {
+    set({ lrclibEnabled: enabled });
+    if (isTauriRuntime()) {
+      const saved = await backendApi.setLrclibEnabled(enabled);
+      set({ lrclibEnabled: saved.lrclib_enabled });
+    }
   },
 
   dismissToast: () => {

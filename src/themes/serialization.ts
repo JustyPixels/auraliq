@@ -38,7 +38,7 @@ export interface ThemeExportBundle {
   customCss: string;
   customCssEnabled: boolean;
   uiDensity?: "comfortable" | "compact";
-  visualizerStyle?: "bars" | "scope" | "cassette";
+  visualizerStyle?: "bars" | "scope" | "cassette" | "vu" | "crt-matrix";
 }
 
 export function serializeThemeBundle(bundle: ThemeExportBundle): string {
@@ -99,7 +99,9 @@ export function parseThemeBundle(rawJson: string): ThemeExportBundle {
   const visualizerStyle =
     record.visualizerStyle === "bars" ||
     record.visualizerStyle === "scope" ||
-    record.visualizerStyle === "cassette"
+    record.visualizerStyle === "cassette" ||
+    record.visualizerStyle === "vu" ||
+    record.visualizerStyle === "crt-matrix"
       ? record.visualizerStyle
       : undefined;
 

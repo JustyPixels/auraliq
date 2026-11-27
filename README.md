@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.7.0 — Milestone 10](https://img.shields.io/badge/Status-v0.7.0%20Milestone%2010-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.8.0 — Milestone 11](https://img.shields.io/badge/Status-v0.8.0%20Milestone%2011-4c1d95.svg)](ROADMAP.md)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
 
@@ -24,8 +24,11 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.7.0 — Milestone 10 Customization & 90s Deck UI)
+### Available (v0.8.0 — Milestone 11 Audio DSP, Lyrics & Visualizers)
 
+- **Audio DSP & Playback Enhancements**: 5-band biquad Equalizer with 6 presets, ReplayGain normalization, **Gapless Playback**, and **Crossfade (0–8s)**
+- **Opt-In Synced & Local Lyrics**: Automatic offline `.lrc` sidecars + optional opt-in LRCLIB synced/plain lyrics with click-to-seek
+- **5 Retro Hardware Visualizers**: Segmented 90s LED Bars, CRT Scope, Cassette Deck, **Dual Analog VU Meters**, and **CRT Matrix**
 - **1990s Retro Purplish Deck UI**: Zero-radius beveled panels, 3D hardware buttons, gradient titlebars, square LEDs, and subtle CRT scanlines
 - **Theme Editor & Safe Live CSS**: Live 10-color palette overrides, typography presets, bevel style (`90s 3D Bevel` / `Flat Pixel`), scanline slider, sanitized `<style id="auraliq-user-css">` live CSS editor, JSON theme import/export, and Safe Reset
 - **Source-Aware Download Manager**: Permitted downloads for open/CC sources (Internet Archive, artist-approved Jamendo tracks) with pause/resume (`Range`), retry/cancel, concurrency control, naming templates, `lofty` auto-tagging, and auto-import to the local library
@@ -34,13 +37,12 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 - **Bring-Your-Own-Key (BYOK) Providers**: **Jamendo** (CC catalog), **Freesound** (CC ambient/synth stems), and **YouTube** (Data API v3 search + external watch handoff) stored in Windows Credential Manager
 - Dedicated-thread Rust audio engine (`symphonia` + `cpal` + stereo resampler) supporting local files and validated HTTP audio streams
 - Windows SMTC & hardware media keys (`souvlaki`), CPAL audio output device selection, and automatic stream error recovery
-- Real-time `realfft` spectrum/waveform tap with Canvas visualizers (`Retro Bars`, `CRT Oscilloscope`, `Cassette Reels`) and Low-Performance mode
 - SQLite (`rusqlite` + WAL + FTS5) local library, `lofty` metadata/artwork, M3U/M3U8/PLS playlists, smart playlists, custom collections, duplicate detection, and non-destructive track identity matching
 - 5 built-in retro themes, UI density, resizable/customizable sidebar, and rebindable keyboard shortcuts
 
 ### In Development
 
-- Optional LRCLIB Lyrics, Equalizer & Audio Enhancements (Milestone 11)
+- Static Retro Website & GitHub Pages Deployment (Milestone 12)
 
 ### Planned
 

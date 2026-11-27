@@ -1,8 +1,8 @@
 use tauri::State;
 
 use crate::audio::{
-    list_audio_devices as enumerate_audio_devices, AudioDeviceInfo, PlaybackSnapshot,
-    VisualizerFrame,
+    list_audio_devices as enumerate_audio_devices, AudioDeviceInfo, AudioEnhancementsConfig,
+    PlaybackSnapshot, VisualizerFrame,
 };
 use crate::database::models::PlaybackStateRecord;
 use crate::error::AppError;
@@ -122,4 +122,34 @@ pub fn save_playback_state(
         .lock()
         .map_err(|_| AppError::Internal("Database lock poisoned".to_string()))?;
     db.save_playback_state(&playback_state)
+}
+
+#[tauri::command]
+pub fn get_audio_enhancements(state: State<'_, AppState>) -> AudioEnhancementsConfig {
+    state.audio.get_enhancements()
+}
+
+#[tauri::command]
+pub fn set_audio_enhancements(
+    config: AudioEnhancementsConfig,
+    state: State<'_, AppState>,
+) -> Result<AudioEnhancementsConfig, AppError> {
+    let clamped = config.clamped();
+    state.audio.set_enhancements(clamped.clone())?;
+    Ok(clamped)
+}
+
+#[tauri::command]
+pub fn preload_next_track(track_id: i64, state: State<'_, AppState>) -> Result<(), AppError> {
+    let track = {
+        let db = state
+            .db
+            .lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".to_string()))?;
+        db.get_track(track_id)?
+    };
+    if let Some(t) = track {
+        state.audio.preload_next(t.file_path)?;
+    }
+    Ok(())
 }
