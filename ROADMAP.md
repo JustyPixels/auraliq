@@ -76,11 +76,11 @@
 
 ---
 
-## Milestone 7 — Online Provider Framework (`0.4.0`)
+## Milestone 7 — Online Provider Framework (`0.4.0`) [COMPLETED]
 
-- [ ] Implement `MusicProvider` trait, `ProviderCapabilities`, and `ProviderRegistry`
-- [ ] Implement `keyring`-backed credential storage and provider settings UI
-- [ ] Enforce capability-driven UI (disable/explain unsupported actions)
+- [x] Implement `MusicProvider` trait, `ProviderCapabilities`, and `ProviderRegistry`
+- [x] Implement `keyring`-backed credential storage and SSRF/URL security validation
+- [x] Implement HTTP stream playback readiness in `AudioEngine` and dynamic capability-driven Provider Settings UI
 
 ---
 

@@ -1,6 +1,6 @@
 [package]
 name = "auraliq"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 license = "MIT"
 description = "Retro-inspired unified music hub"
@@ -26,6 +26,10 @@ walkdir = "2.5.1"
 sha2 = "0.10"
 souvlaki = { version = "0.9.3", default-features = false }
 realfft = "3.5.1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking", "charset", "http2", "system-proxy"] }
+keyring = { version = "3.6", features = ["windows-native"] }
+async-trait = "0.1"
+url = "2"
 
 [dev-dependencies]
 tempfile = "3"

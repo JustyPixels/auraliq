@@ -851,6 +851,33 @@ impl Database {
         )?;
         Ok(())
     }
+
+    pub fn is_provider_enabled(
+        &self,
+        provider_id: &str,
+        default_enabled: bool,
+    ) -> Result<bool, AppError> {
+        let row: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT enabled FROM provider_settings WHERE provider_id = ?1",
+                params![provider_id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        Ok(row.map(|v| v != 0).unwrap_or(default_enabled))
+    }
+
+    pub fn set_provider_enabled(&self, provider_id: &str, enabled: bool) -> Result<(), AppError> {
+        let now = now_unix_secs();
+        self.conn.execute(
+            "INSERT INTO provider_settings (provider_id, enabled, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(provider_id) DO UPDATE SET enabled = excluded.enabled, updated_at = excluded.updated_at",
+            params![provider_id, i64::from(enabled), now],
+        )?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

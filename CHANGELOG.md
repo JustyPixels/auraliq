@@ -5,6 +5,16 @@ All notable changes to **Auraliq** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-27
+
+### Added
+
+- **Milestone 7 (Online Provider Framework)**:
+  - Modular `MusicProvider` trait, `ProviderCapabilities`, and `ProviderRegistry` (`src-tauri/src/providers/`).
+  - Windows Credential Manager secret storage (`keyring`) and SSRF/URL/filename security validation (`src-tauri/src/security/`).
+  - SQLite migration v3 (`provider_settings`) and HTTP audio stream playback readiness (`load_and_play_url`) in `AudioEngine`.
+  - Dynamic capability-driven Provider Settings UI (`useProvidersStore`, live Enable/Disable toggles, keyring credential fields).
+
 ## [0.3.1] - 2026-11-27
 
 ### Added

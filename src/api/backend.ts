@@ -1,5 +1,6 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import type { ProviderInfo, ProviderSearchResult } from "../types/providers";
 import type {
   AlbumSummary,
   ArtistSummary,
@@ -138,4 +139,30 @@ export const backendApi = {
   loadPlaybackState: () => invoke<PlaybackStateRecord>("load_playback_state"),
   savePlaybackState: (playbackState: PlaybackStateRecord) =>
     invoke<void>("save_playback_state", { playbackState }),
+
+  listProviders: () => invoke<ProviderInfo[]>("list_providers"),
+  setProviderEnabled: (providerId: string, enabled: boolean) =>
+    invoke<void>("set_provider_enabled", { providerId, enabled }),
+  saveProviderCredential: (providerId: string, field: string, value: string) =>
+    invoke<void>("save_provider_credential", { providerId, field, value }),
+  clearProviderCredential: (providerId: string, field: string) =>
+    invoke<void>("clear_provider_credential", { providerId, field }),
+  searchProvider: (providerId: string, query: string, limit = 20) =>
+    invoke<ProviderSearchResult>("search_provider", { providerId, query, limit }),
+  playOnlineTrack: (
+    providerId: string,
+    streamUrl: string,
+    title: string,
+    artist: string,
+    album: string,
+    durationMs = 0,
+  ) =>
+    invoke<void>("play_online_track", {
+      providerId,
+      streamUrl,
+      title,
+      artist,
+      album,
+      durationMs,
+    }),
 };

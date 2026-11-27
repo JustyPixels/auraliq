@@ -5,6 +5,7 @@ import { AppShell } from "../layouts/AppShell";
 import { useLayoutStore } from "../stores/useLayoutStore";
 import { useLibraryStore } from "../stores/useLibraryStore";
 import { usePlayerStore } from "../stores/usePlayerStore";
+import { useProvidersStore } from "../stores/useProvidersStore";
 import { useThemeStore } from "../stores/useThemeStore";
 
 export function App() {
@@ -13,6 +14,7 @@ export function App() {
   const refreshLibrary = useLibraryStore((state) => state.refreshLibrary);
   const hydratePlayer = usePlayerStore((state) => state.hydrate);
   const refreshAudioDevices = usePlayerStore((state) => state.refreshAudioDevices);
+  const refreshProviders = useProvidersStore((state) => state.refreshProviders);
 
   useEffect(() => {
     initTheme();
@@ -23,6 +25,7 @@ export function App() {
     }
 
     void refreshAudioDevices();
+    void refreshProviders();
     void refreshLibrary().then(() => {
       const tracks = useLibraryStore.getState().tracks;
       return hydratePlayer(tracks);
@@ -62,7 +65,14 @@ export function App() {
     return () => {
       unlisten?.();
     };
-  }, [applyLayoutToDocument, hydratePlayer, initTheme, refreshAudioDevices, refreshLibrary]);
+  }, [
+    applyLayoutToDocument,
+    hydratePlayer,
+    initTheme,
+    refreshAudioDevices,
+    refreshLibrary,
+    refreshProviders,
+  ]);
 
   return <AppShell />;
 }

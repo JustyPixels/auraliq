@@ -18,6 +18,12 @@ pub enum AppError {
     NotFound(String),
     #[error("unsupported format: {0}")]
     UnsupportedFormat(String),
+    #[error("provider error: {0}")]
+    Provider(String),
+    #[error("security error: {0}")]
+    Security(String),
+    #[error("unsupported provider action: {0}")]
+    UnsupportedProviderAction(String),
 }
 
 #[derive(Debug, Serialize)]
@@ -37,6 +43,9 @@ impl AppError {
             Self::Metadata(_) => "METADATA_ERROR",
             Self::NotFound(_) => "NOT_FOUND",
             Self::UnsupportedFormat(_) => "UNSUPPORTED_FORMAT",
+            Self::Provider(_) => "PROVIDER_ERROR",
+            Self::Security(_) => "SECURITY_ERROR",
+            Self::UnsupportedProviderAction(_) => "UNSUPPORTED_PROVIDER_ACTION",
         }
     }
 }

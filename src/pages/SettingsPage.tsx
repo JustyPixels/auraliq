@@ -8,7 +8,6 @@ import { Slider } from "../components/Slider";
 import { ThemePicker } from "../components/ThemePicker";
 import type { RuntimeStatus } from "../hooks/useAppInfo";
 import { NAV_ITEMS, type NavSectionId } from "../layouts/nav";
-import { PROVIDER_CATALOG } from "../providers/catalog";
 import {
   LOCKED_NAV_SECTIONS,
   MAX_SIDEBAR_WIDTH,
@@ -16,6 +15,7 @@ import {
   useLayoutStore,
 } from "../stores/useLayoutStore";
 import { usePlayerStore } from "../stores/usePlayerStore";
+import { useProvidersStore } from "../stores/useProvidersStore";
 import {
   formatKeyEvent,
   SHORTCUT_DEFINITIONS,
@@ -37,6 +37,7 @@ const NAV_MAP = new Map(NAV_ITEMS.map((item) => [item.id, item]));
 export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("appearance");
   const [capturingId, setCapturingId] = useState<ShortcutActionId | null>(null);
+  const [secretInputs, setSecretInputs] = useState<Record<string, string>>({});
 
   const {
     defaultLandingPage,
@@ -67,6 +68,13 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
     setVisualizerStyle,
     setLowPerformanceVisualizer,
   } = usePlayerStore();
+  const {
+    providers,
+    error: providerError,
+    toggleProviderEnabled,
+    saveCredential,
+    clearCredential,
+  } = useProvidersStore();
   const inTauri = isTauriRuntime();
 
   useEffect(() => {
@@ -350,13 +358,42 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
       )}
 
       {activeTab === "providers" && (
-        <Panel title="Music Source Capabilities">
+        <Panel title="Music Source Capabilities & Credentials" ledActive={inTauri}>
+          {providerError && (
+            <p role="alert" style={{ color: "var(--aq-warn)", marginTop: 0 }}>
+              {providerError}
+            </p>
+          )}
           <div className="aq-provider-grid">
-            {PROVIDER_CATALOG.map((provider) => (
+            {providers.map((provider) => (
               <article key={provider.id} className="aq-provider-card">
                 <div className="aq-row-wrap" style={{ justifyContent: "space-between" }}>
-                  <strong>{provider.name}</strong>
-                  <Badge tone="accent">{provider.statusLabel}</Badge>
+                  <div className="aq-row-wrap">
+                    <span
+                      className={`aq-led ${provider.enabled ? "aq-led--on" : ""}`}
+                      aria-hidden="true"
+                    />
+                    <strong>{provider.name}</strong>
+                  </div>
+                  <div className="aq-row-wrap">
+                    <Badge tone="accent">{provider.status_label}</Badge>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      active={provider.enabled}
+                      disabled={!inTauri || provider.id === "local"}
+                      title={
+                        !inTauri
+                          ? "Requires desktop Tauri runtime"
+                          : provider.id === "local"
+                            ? "Local Library is always enabled"
+                            : undefined
+                      }
+                      onClick={() => void toggleProviderEnabled(provider.id, !provider.enabled)}
+                    >
+                      {provider.enabled ? "Enabled" : "Disabled"}
+                    </Button>
+                  </div>
                 </div>
                 <span style={{ fontSize: "0.78rem", color: "var(--aq-muted)" }}>
                   {provider.tier}
@@ -365,13 +402,79 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
                   {provider.description}
                 </p>
                 <div className="aq-row-wrap">
-                  <Badge>Search: {provider.capabilities.search}</Badge>
-                  <Badge>Play: {provider.capabilities.playback}</Badge>
-                  <Badge>DL: {provider.capabilities.download}</Badge>
-                  <Badge>Offline: {provider.capabilities.offline}</Badge>
+                  <Badge>Search: {provider.capabilities.search ? "Yes" : "No"}</Badge>
+                  <Badge>
+                    Stream:{" "}
+                    {provider.capabilities.stream_playback
+                      ? "In-App"
+                      : provider.capabilities.external_playback_only
+                        ? "External/Embed"
+                        : "No"}
+                  </Badge>
+                  <Badge>DL: {provider.capabilities.download ? "Permitted" : "No"}</Badge>
+                  <Badge>
+                    Cache: {provider.capabilities.offline_cache_allowed ? "Allowed" : "No"}
+                  </Badge>
                 </div>
+                {provider.auth_fields.length > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.45rem",
+                      marginTop: "0.25rem",
+                    }}
+                  >
+                    {provider.auth_fields.map((field) => {
+                      const keyId = `${provider.id}:${field.key}`;
+                      return (
+                        <div key={keyId} className="aq-row-wrap">
+                          <input
+                            type={field.is_secret ? "password" : "text"}
+                            className="aq-input"
+                            style={{ flex: 1, minWidth: "140px" }}
+                            placeholder={
+                              provider.auth_configured
+                                ? "Stored in Windows Credential Manager"
+                                : field.label
+                            }
+                            aria-label={field.label}
+                            disabled={!inTauri}
+                            value={secretInputs[keyId] ?? ""}
+                            onChange={(e) =>
+                              setSecretInputs((prev) => ({ ...prev, [keyId]: e.target.value }))
+                            }
+                          />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={!inTauri || !(secretInputs[keyId] ?? "").trim()}
+                            onClick={() => {
+                              const val = secretInputs[keyId] ?? "";
+                              void saveCredential(provider.id, field.key, val).then(() => {
+                                setSecretInputs((prev) => ({ ...prev, [keyId]: "" }));
+                              });
+                            }}
+                          >
+                            Save
+                          </Button>
+                          {provider.auth_configured && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={!inTauri}
+                              onClick={() => void clearCredential(provider.id, field.key)}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <p style={{ margin: 0, fontSize: "0.76rem", color: "var(--aq-muted)" }}>
-                  {provider.restrictionNote}
+                  {provider.restriction_note}
                 </p>
               </article>
             ))}

@@ -70,6 +70,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     fireEvent.click(screen.getByRole("tab", { name: "Providers" }));
     expect(screen.getByText("Internet Archive")).toBeInTheDocument();
+    expect(screen.getByText("Audius")).toBeInTheDocument();
     expect(screen.getByText("YouTube")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Layout & Sidebar" }));
@@ -107,7 +108,10 @@ describe("App", () => {
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
     vi.mocked(invoke).mockImplementation(async (cmd: string) => {
       if (cmd === "get_app_info") {
-        return { name: "Auraliq", version: "0.2.0", platform: "windows", arch: "x86_64" };
+        return { name: "Auraliq", version: "0.4.0", platform: "windows", arch: "x86_64" };
+      }
+      if (cmd === "list_providers") {
+        return [];
       }
       if (cmd === "load_playback_state") {
         return {

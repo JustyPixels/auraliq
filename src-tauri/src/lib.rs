@@ -5,6 +5,8 @@ pub mod error;
 pub mod library;
 pub mod metadata;
 pub mod platform;
+pub mod providers;
+pub mod security;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -14,11 +16,13 @@ use tauri::Manager;
 use audio::AudioEngine;
 use database::Database;
 use platform::media_keys::MediaSession;
+use providers::ProviderRegistry;
 
 pub struct AppState {
     pub db: Mutex<Database>,
     pub audio: AudioEngine,
     pub media_session: MediaSession,
+    pub providers: ProviderRegistry,
     pub artwork_dir: PathBuf,
 }
 
@@ -42,6 +46,7 @@ pub fn run() {
                 db: Mutex::new(db),
                 audio: AudioEngine::new(),
                 media_session,
+                providers: ProviderRegistry::new(),
                 artwork_dir,
             });
             Ok(())
@@ -95,6 +100,12 @@ pub fn run() {
             commands::player::get_visualizer_frame,
             commands::player::load_playback_state,
             commands::player::save_playback_state,
+            commands::providers::list_providers,
+            commands::providers::set_provider_enabled,
+            commands::providers::save_provider_credential,
+            commands::providers::clear_provider_credential,
+            commands::providers::search_provider,
+            commands::providers::play_online_track,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Auraliq");

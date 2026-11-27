@@ -150,6 +150,14 @@ VALUES
     ('Never Played', 'all', '[{"field":"play_count","operator":"equals","value":"0"}]', 0);
 "#;
 
+const MIGRATION_V3: &str = r#"
+CREATE TABLE IF NOT EXISTS provider_settings (
+    provider_id TEXT PRIMARY KEY,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    updated_at INTEGER NOT NULL
+);
+"#;
+
 pub fn apply_migrations(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;")?;
     let current_version: i64 = conn.query_row("PRAGMA user_version;", [], |row| row.get(0))?;
@@ -165,6 +173,13 @@ pub fn apply_migrations(conn: &Connection) -> Result<(), AppError> {
         let tx = conn.unchecked_transaction()?;
         tx.execute_batch(MIGRATION_V2)?;
         tx.pragma_update(None, "user_version", 2i64)?;
+        tx.commit()?;
+    }
+
+    if current_version < 3 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(MIGRATION_V3)?;
+        tx.pragma_update(None, "user_version", 3i64)?;
         tx.commit()?;
     }
 

@@ -17,7 +17,7 @@ use symphonia::core::audio::SampleBuffer;
 use symphonia::core::codecs::{Decoder, DecoderOptions, CODEC_TYPE_NULL};
 use symphonia::core::errors::Error as SymphoniaError;
 use symphonia::core::formats::{FormatOptions, FormatReader, SeekMode, SeekTo};
-use symphonia::core::io::MediaSourceStream;
+use symphonia::core::io::{MediaSourceStream, ReadOnlySource};
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 use symphonia::core::units::Time;
@@ -81,6 +81,7 @@ impl Default for PlaybackSnapshot {
 
 enum AudioCommand {
     LoadAndPlay { path: String, start_ms: u64 },
+    LoadAndPlayUrl { url: String },
     Play,
     Pause,
     Stop,
@@ -155,6 +156,78 @@ fn open_symphonia_decoder(path: &Path) -> Result<LoadedDecoder, AppError> {
     let decoder = get_codecs()
         .make(&track.codec_params, &DecoderOptions::default())
         .map_err(|e| AppError::UnsupportedFormat(format!("Unsupported codec: {e}")))?;
+
+    Ok(LoadedDecoder {
+        format,
+        decoder,
+        track_id,
+        src_rate,
+        src_channels,
+        duration_ms,
+    })
+}
+
+fn open_symphonia_url_decoder(raw_url: &str) -> Result<LoadedDecoder, AppError> {
+    let parsed = crate::security::validation::validate_remote_url(raw_url, true)?;
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("Auraliq/0.4.0 (https://github.com/JustyPixels/auraliq)")
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|e| AppError::Audio(format!("HTTP client error: {e}")))?;
+
+    let resp = client
+        .get(parsed.clone())
+        .send()
+        .map_err(|e| AppError::Audio(format!("Stream connection failed: {e}")))?;
+
+    if !resp.status().is_success() {
+        return Err(AppError::Audio(format!(
+            "Stream returned HTTP {}",
+            resp.status()
+        )));
+    }
+
+    let mut hint = Hint::new();
+    if let Some(ext) = Path::new(parsed.path())
+        .extension()
+        .and_then(|e| e.to_str())
+    {
+        hint.with_extension(ext);
+    }
+
+    let mss = MediaSourceStream::new(Box::new(ReadOnlySource::new(resp)), Default::default());
+    let probed = get_probe()
+        .format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )
+        .map_err(|e| AppError::UnsupportedFormat(format!("Unable to probe stream: {e}")))?;
+
+    let format = probed.format;
+    let track = format
+        .tracks()
+        .iter()
+        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+        .ok_or_else(|| {
+            AppError::UnsupportedFormat("No supported audio track in stream".to_string())
+        })?;
+
+    let track_id = track.id;
+    let src_rate = track.codec_params.sample_rate.unwrap_or(44_100);
+    let src_channels = track.codec_params.channels.map(|c| c.count()).unwrap_or(2);
+    let duration_ms = match (track.codec_params.n_frames, track.codec_params.time_base) {
+        (Some(frames), Some(tb)) => {
+            let time = tb.calc_time(frames);
+            time.seconds * 1000 + (time.frac * 1000.0) as u64
+        }
+        _ => 0,
+    };
+
+    let decoder = get_codecs()
+        .make(&track.codec_params, &DecoderOptions::default())
+        .map_err(|e| AppError::UnsupportedFormat(format!("Unsupported stream codec: {e}")))?;
 
     Ok(LoadedDecoder {
         format,
@@ -470,6 +543,67 @@ fn audio_worker_loop(
                         }
                     }
                 }
+                AudioCommand::LoadAndPlayUrl { url } => {
+                    playing_flag.store(false, Ordering::Relaxed);
+                    if let Ok(mut q) = pcm_queue.lock() {
+                        q.clear();
+                    }
+                    mono_ring.clear();
+                    active_decoder = None;
+                    eof_reached = false;
+
+                    if output_stream.is_none() {
+                        match init_cpal_output(
+                            preferred_device.as_deref(),
+                            Arc::clone(&pcm_queue),
+                            Arc::clone(&playing_flag),
+                            Arc::clone(&volume_bits),
+                            Arc::clone(&muted_flag),
+                            Arc::clone(&stream_error_flag),
+                        ) {
+                            Ok((stream, rate, dev_name)) => {
+                                output_stream = Some((stream, rate));
+                                if let Ok(mut snap) = snapshot.lock() {
+                                    snap.output_device = Some(dev_name);
+                                }
+                            }
+                            Err(e) => {
+                                reset_visualizer(&visualizer);
+                                if let Ok(mut snap) = snapshot.lock() {
+                                    snap.status = "error".to_string();
+                                    snap.last_error = Some(e.to_string());
+                                    snap.track_ended = false;
+                                }
+                                continue;
+                            }
+                        }
+                    }
+
+                    match open_symphonia_url_decoder(&url) {
+                        Ok(loaded) => {
+                            decoded_frames_played = 0;
+                            if let Ok(mut snap) = snapshot.lock() {
+                                snap.status = "playing".to_string();
+                                snap.current_path = Some(url);
+                                snap.position_ms = 0;
+                                snap.duration_ms = loaded.duration_ms;
+                                snap.track_ended = false;
+                                snap.last_error = None;
+                            }
+                            active_decoder = Some(loaded);
+                            playing_flag.store(true, Ordering::Relaxed);
+                        }
+                        Err(e) => {
+                            reset_visualizer(&visualizer);
+                            if let Ok(mut snap) = snapshot.lock() {
+                                snap.status = "error".to_string();
+                                snap.current_path = Some(url);
+                                snap.last_error = Some(e.to_string());
+                                snap.track_ended = false;
+                            }
+                        }
+                    }
+                }
                 AudioCommand::Play => {
                     if active_decoder.is_some() {
                         playing_flag.store(true, Ordering::Relaxed);
@@ -646,6 +780,12 @@ impl AudioEngine {
     pub fn load_and_play(&self, path: String, start_ms: u64) -> Result<(), AppError> {
         self.tx
             .send(AudioCommand::LoadAndPlay { path, start_ms })
+            .map_err(|e| AppError::Audio(e.to_string()))
+    }
+
+    pub fn load_and_play_url(&self, url: String) -> Result<(), AppError> {
+        self.tx
+            .send(AudioCommand::LoadAndPlayUrl { url })
             .map_err(|e| AppError::Audio(e.to_string()))
     }
 
