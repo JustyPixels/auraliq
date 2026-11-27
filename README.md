@@ -6,9 +6,16 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: v0.8.0 — Milestone 11](https://img.shields.io/badge/Status-v0.8.0%20Milestone%2011-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.8.1 — Milestone 12](https://img.shields.io/badge/Status-v0.8.1%20Milestone%2012-4c1d95.svg)](ROADMAP.md)
+[![Website](https://img.shields.io/badge/Website-GitHub%20Pages-6d28d9.svg)](https://justypixels.github.io/auraliq/)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
+
+---
+
+## Screenshots
+
+![Auraliq 1990s Retro Purplish Signal Deck](docs/screenshots/auraliq-home.png)
 
 ---
 
@@ -24,7 +31,7 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.8.0 — Milestone 11 Audio DSP, Lyrics & Visualizers)
+### Available (v0.8.1 — Milestone 12 Website, DSP, Lyrics & Visualizers)
 
 - **Audio DSP & Playback Enhancements**: 5-band biquad Equalizer with 6 presets, ReplayGain normalization, **Gapless Playback**, and **Crossfade (0–8s)**
 - **Opt-In Synced & Local Lyrics**: Automatic offline `.lrc` sidecars + optional opt-in LRCLIB synced/plain lyrics with click-to-seek
@@ -42,11 +49,11 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ### In Development
 
-- Static Retro Website & GitHub Pages Deployment (Milestone 12)
+- QA, Performance Profiling & Security Audit (Milestone 13)
 
 ### Planned
 
-- Windows SMTC/media keys, Canvas FFT visualizers, unified track identity, modular online providers (Internet Archive, Radio Browser, Direct URLs), download manager, LRU cache, live CSS editor, and NSIS/Portable Windows releases.
+- Windows NSIS Installer & Portable ZIP MVP Release with SHA-256 Checksums (Milestone 14)
 
 ### Not Supported (By Design / Legal Compliance)
 
@@ -70,12 +77,12 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 | Source               | Search     | Playback            | Download            | Offline             | Status             |
 | -------------------- | ---------- | ------------------- | ------------------- | ------------------- | ------------------ |
 | Local Library        | Yes (FTS5) | Yes (Symphonia)     | N/A                 | Yes                 | **Supported (M4)** |
-| Audius               | Yes        | Yes (320kbps)       | Artist-dependent    | Cache planned (M9)  | **Supported (M8)** |
-| Internet Archive     | Yes        | Yes (Stream)        | Planned (M9)        | Cache planned (M9)  | **Supported (M8)** |
+| Audius               | Yes        | Yes (320kbps)       | **No**              | Allowed (LRU, M9)   | **Supported (M8)** |
+| Internet Archive     | Yes        | Yes (Stream)        | Permitted (M9)      | Allowed (LRU, M9)   | **Supported (M8)** |
 | Radio Browser        | Yes        | Yes (Live Radio)    | **No** (Live Radio) | **No**              | **Supported (M8)** |
-| Direct Audio URLs    | N/A        | Yes (HTTPS)         | Conditional         | Conditional         | **Supported (M8)** |
-| Jamendo (BYOK Key)   | Yes        | Yes (CC MP3)        | Planned (M9)        | Cache planned (M9)  | **Supported (M8)** |
-| Freesound (BYOK Key) | Yes        | Yes (CC Previews)   | **No**              | Cache planned (M9)  | **Supported (M8)** |
+| Direct Audio URLs    | N/A        | Yes (HTTPS)         | **No**              | **No**              | **Supported (M8)** |
+| Jamendo (BYOK Key)   | Yes        | Yes (CC MP3)        | Artist-Permitted    | Allowed (LRU, M9)   | **Supported (M8)** |
+| Freesound (BYOK Key) | Yes        | Yes (CC Previews)   | **No**              | Allowed (LRU, M9)   | **Supported (M8)** |
 | YouTube (BYOK Key)   | Yes        | External Watch Only | **No** (Prohibited) | **No** (Prohibited) | **Optional (M8)**  |
 | Spotify              | Limited    | Restricted Official | **No** (Prohibited) | **No** (Prohibited) | Post-MVP Optional  |
 

@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en" data-scanlines="on">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auraliq — Your music. Your frequency.</title>
+    <meta
+      name="description"
+      content="Auraliq is a retro-inspired unified music hub built with Rust + Tauri v2 for local libraries, compliant online playback, permitted downloads, and deep UI customization."
+    />
+    <link rel="icon" type="image/svg+xml" href="assets/auraliq-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="aq-scanlines" aria-hidden="true"></div>
+
+    <header class="aq-topbar">
+      <div class="aq-topbar__inner">
+        <a href="#top" class="aq-brand">
+          <img src="assets/auraliq-icon.svg" alt="" width="28" height="28" />
+          <span>AURALIQ</span>
+        </a>
+
+        <nav class="aq-nav" aria-label="Primary">
+          <a class="aq-btn" href="#features">Features</a>
+          <a class="aq-btn" href="#downloads">Downloads</a>
+          <a class="aq-btn" href="#sources">Sources</a>
+          <a class="aq-btn" href="#roadmap">Roadmap</a>
+          <a class="aq-btn" href="#about">About</a>
+          <a class="aq-btn" href="#faq">FAQ</a>
+          <a
+            class="aq-btn aq-btn--primary"
+            href="https://github.com/JustyPixels/auraliq"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+        </nav>
+
+        <div class="aq-row-wrap" aria-label="Theme preview controls">
+          <button type="button" class="aq-btn aq-btn--active" data-set-theme="midnight-cassette">
+            90s Purple
+          </button>
+          <button type="button" class="aq-btn" data-set-theme="crt-purple">CRT Violet</button>
+          <button type="button" class="aq-btn" data-set-theme="analog-amber">Amber</button>
+          <button type="button" class="aq-btn" data-set-theme="retro-terminal">Terminal</button>
+          <button type="button" class="aq-btn" data-set-theme="classic-gray">Classic Gray</button>
+          <button type="button" class="aq-btn aq-btn--active" data-toggle-scanlines>
+            CRT Scanlines: On
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="top" class="aq-container">
+      <section class="aq-panel" aria-labelledby="hero-heading">
+        <div class="aq-panel__header">
+          <div class="aq-panel__title-wrap">
+            <span class="aq-led" aria-hidden="true"></span>
+            <span>Signal Deck // v0.8.1</span>
+          </div>
+          <span class="aq-badge aq-badge--accent">Rust + Tauri v2</span>
+        </div>
+        <div class="aq-panel__body aq-hero">
+          <div>
+            <h1 id="hero-heading" class="aq-hero__title">Your music. Your frequency.</h1>
+            <p class="aq-hero__sub">
+              A 1990s retro-inspired desktop music hub built with Rust &amp; Tauri v2. Combine your
+              local FLAC/MP3/OPUS library, compliant open online streams, a 5-band biquad equalizer,
+              and live CSS customization—with zero ads and zero telemetry.
+            </p>
+            <div class="aq-row-wrap" style="margin-bottom: 1rem">
+              <span class="aq-badge aq-badge--ok">MIT License</span>
+              <span class="aq-badge">Windows 10/11 x64</span>
+              <span class="aq-badge aq-badge--accent">Zero Telemetry</span>
+              <span class="aq-badge">Local-First SQLite FTS5</span>
+            </div>
+            <div class="aq-row-wrap">
+              <a class="aq-btn aq-btn--primary" href="#downloads">Get Auraliq (v0.8.1)</a>
+              <a
+                class="aq-btn"
+                href="https://github.com/JustyPixels/auraliq"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Source Repository
+              </a>
+            </div>
+          </div>
+
+          <div class="aq-screenshot-frame">
+            <img
+              src="assets/screenshots/auraliq-home.png"
+              alt="Auraliq desktop application showing the 1990s retro purplish Signal Deck interface"
+              width="1280"
+              height="760"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="aq-panel" aria-labelledby="features-heading">
+        <div class="aq-panel__header">
+          <div class="aq-panel__title-wrap">
+            <span class="aq-led" aria-hidden="true"></span>
+            <span id="features-heading">Core Capabilities</span>
+          </div>
+          <span class="aq-badge">Local + Compliant Online</span>
+        </div>
+        <div class="aq-panel__body aq-grid-3">
+          <article class="aq-well">
+            <h3>Local FTS5 Music Engine</h3>
+            <p>
+              Fast SQLite full-text indexing, incremental folder scanning, <code>lofty</code> tag
+              &amp; cover art extraction, M3U/M3U8/PLS import/export, smart playlists, and
+              non-destructive duplicate detection.
+            </p>
+          </article>
+          <article class="aq-well">
+            <h3>Dedicated Rust Audio + DSP</h3>
+            <p>
+              <code>symphonia</code> + <code>cpal</code> playback thread with 5-band biquad
+              equalizer, 6 presets, ReplayGain normalization, gapless playback, and configurable
+              crossfade (0–8s).
+            </p>
+          </article>
+          <article class="aq-well">
+            <h3>Zero-Key &amp; BYOK Online Music</h3>
+            <p>
+              Stream Audius, Internet Archive, Radio Browser, and Direct HTTPS URLs out of the box,
+              plus optional BYOK Jamendo, Freesound, and YouTube metadata stored in Windows
+              Credential Manager.
+            </p>
+          </article>
+          <article class="aq-well">
+            <h3>Source-Aware Downloads &amp; Cache</h3>
+            <p>
+              Resumable HTTP <code>Range</code> downloads exclusively for permitted open/CC sources,
+              <code>lofty</code> auto-tagging, and a separate LRU temporary stream cache with
+              Offline Mode.
+            </p>
+          </article>
+          <article class="aq-well">
+            <h3>Opt-In Synced Lyrics &amp; Visualizers</h3>
+            <p>
+              Automatic offline <code>.lrc</code> sidecars, optional opt-in LRCLIB synced lyrics
+              with click-to-seek, and 5 Canvas visualizers: Segmented LED Bars, CRT Scope, Cassette,
+              Dual VU, and CRT Matrix.
+            </p>
+          </article>
+          <article class="aq-well">
+            <h3>1990s Deck UI &amp; Live CSS</h3>
+            <p>
+              Zero-radius beveled purple hardware chrome, 5 built-in presets, 10-color palette
+              overrides, typography presets, sanitized
+              <code>&lt;style id="auraliq-user-css"&gt;</code>
+              editor, and JSON theme import/export.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="downloads" class="aq-panel" aria-labelledby="downloads-heading">
+        <div class="aq-panel__header">
+          <div class="aq-panel__title-wrap">
+            <span class="aq-led" aria-hidden="true"></span>
+            <span id="downloads-heading">Downloads &amp; Building From Source</span>
+          </div>
+          <span class="aq-badge aq-badge--warn">v0.8.1 Pre-MVP</span>
+        </div>
+        <div class="aq-panel__body aq-grid-2">
+          <div class="aq-well">
+            <h3>Windows 10 / 11 (x64) Releases</h3>
+            <p>
+              Auraliq is currently at <strong>v0.8.1</strong> (Milestone 12). Signed/checksummed
+              Windows NSIS installer (<code>.exe</code>) and Portable ZIP bundles arrive in
+              <strong>Milestone 14 (v1.0.0 MVP)</strong>. Check GitHub Releases for tagged builds.
+            </p>
+            <div class="aq-row-wrap" style="margin-top: 0.9rem">
+              <a
+                class="aq-btn aq-btn--primary"
+                href="https://github.com/JustyPixels/auraliq/releases"
+                target="_blank"
+                rel="noreferrer"
+              >
+                View GitHub Releases
+              </a>
+              <a
+                class="aq-btn"
+                href="https://github.com/JustyPixels/auraliq/blob/main/docs/development/BUILDING.md"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Build Guide
+              </a>
+            </div>
+          </div>
+
+          <div class="aq-well">
+            <h3>Run From Source (Windows MSVC)</h3>
+            <p>Requires Node.js 22+, pnpm 10+, Rust stable MSVC, and WebView2 Runtime.</p>
+            <pre class="aq-code">
+git clone https://github.com/JustyPixels/auraliq.git
+cd auraliq
+pnpm install
+pnpm build
+pnpm tauri dev</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="sources" class="aq-panel" aria-labelledby="sources-heading">
+        <div class="aq-panel__header">
+          <div class="aq-panel__title-wrap">
+            <span class="aq-led" aria-hidden="true"></span>
+            <span id="sources-heading">Supported Music Sources &amp; Compliance</span>
+          </div>
+          <span class="aq-badge">Transparent Capabilities</span>
+        </div>
+        <div class="aq-panel__body">
+          <div class="aq-table-wrap">
+            <table class="aq-table">
+              <thead>
+                <tr>
+                  <th>Source</th>
+                  <th>Search</th>
+                  <th>Playback</th>
+                  <th>Download</th>
+                  <th>Offline Cache</th>
+                  <th>Auth</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Local Library</strong></td>
+                  <td>Yes (FTS5)</td>
+                  <td>Yes (Symphonia)</td>
+                  <td>N/A</td>
+                  <td>Always Local</td>
+                  <td>None</td>
+                </tr>
+                <tr>
+                  <td><strong>Audius</strong></td>
+                  <td>Yes</td>
+                  <td>Yes (320 kbps)</td>
+                  <td>No</td>
+                  <td>Allowed (LRU)</td>
+                  <td>None</td>
+                </tr>
+                <tr>
+                  <td><strong>Internet Archive</strong></td>
+                  <td>Yes</td>
+                  <td>Yes (Stream)</td>
+                  <td>Permitted</td>
+                  <td>Allowed (LRU)</td>
+                  <td>None</td>
+                </tr>
+                <tr>
+                  <td><strong>Radio Browser</strong></td>
+                  <td>Yes</td>
+                  <td>Yes (Live Radio)</td>
+                  <td>No</td>
+                  <td>No (Live Only)</td>
+                  <td>None</td>
+                </tr>
+                <tr>
+                  <td><strong>Direct Audio URLs</strong></td>
+                  <td>N/A</td>
+                  <td>Yes (SSRF-Checked)</td>
+                  <td>No</td>
+                  <td>No</td>
+                  <td>None</td>
+                </tr>
+                <tr>
+                  <td><strong>Jamendo</strong></td>
+                  <td>Yes</td>
+                  <td>Yes (CC MP3)</td>
+                  <td>Artist-Permitted</td>
+                  <td>Allowed (LRU)</td>
+                  <td>BYOK Client ID</td>
+                </tr>
+                <tr>
+                  <td><strong>Freesound</strong></td>
+                  <td>Yes</td>
+                  <td>Yes (CC Previews)</td>
+                  <td>No</td>
+                  <td>Allowed (LRU)</td>
+                  <td>BYOK API Key</td>
+                </tr>
+                <tr>
+                  <td><strong>YouTube Data API v3</strong></td>
+                  <td>Yes</td>
+                  <td>External Watch Only</td>
+                  <td>No (Prohibited)</td>
+                  <td>No (Prohibited)</td>
+                  <td>BYOK API Key</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="roadmap" class="aq-panel" aria-labelledby="roadmap-heading">
+        <div class="aq-panel__header">
+          <div class="aq-panel__title-wrap">
+            <span class="aq-led" aria-hidden="true"></span>
+            <span id="roadmap-heading">Project Roadmap (0.1.0 &rarr; 1.0.0)</span>
+          </div>
+          <span class="aq-badge aq-badge--ok">M0–M12 Complete</span>
+        </div>
+        <div class="aq-panel__body aq-grid-3">
+          <div class="aq-well">
+            <h3>M0–M3: Foundation &amp; Shell</h3>
+            <p>
+              Research report, Tauri v2 + React 19 scaffold, branding, 5 themes, persistent shell.
+            </p>
+          </div>
+          <div class="aq-well">
+            <h3>M4–M6: Local Audio &amp; Identity</h3>
+            <p>
+              SQLite FTS5 library, <code>lofty</code> tags, <code>symphonia</code> +
+              <code>cpal</code>
+              playback, SMTC media keys, smart playlists, duplicate matching.
+            </p>
+          </div>
+          <div class="aq-well">
+            <h3>M7–M9: Providers, DL &amp; Cache</h3>
+            <p>
+              Modular <code>ProviderRegistry</code>, <code>keyring</code> BYOK auth, Audius,
+              Internet Archive, Radio Browser, Download Manager, LRU Cache.
+            </p>
+          </div>
+          <div class="aq-well">
+            <h3>M10–M11: Retro UI, DSP &amp; Lyrics</h3>
+            <p>
+              1990s beveled purple UI, Theme &amp; Safe Live CSS editors, 5-band biquad EQ,
+              ReplayGain, Gapless, Crossfade, opt-in LRCLIB lyrics, 5 visualizers.
+            </p>
+          </div>
+          <div class="aq-well">
+            <h3>M12: Website &amp; Docs (Done)</h3>
+            <p>
+              Static 1990s retro project website, automated GitHub Pages deployment, real app
+              screenshots, refreshed documentation.
+            </p>
+          </div>
+          <div class="aq-well">
+            <h3>M13–M14: QA &amp; v1.0.0 MVP</h3>
+            <p>
+              Upcoming: performance profiling, security audit, Windows NSIS &amp; Portable ZIP
+              release pipeline with SHA-256 checksums.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="about" class="aq-panel" aria-labelledby="about-heading">
+        <div class="aq-panel__header">
+          <div class="aq-panel__title-wrap">
+            <span class="aq-led" aria-hidden="true"></span>
+            <span id="about-heading">About Auraliq</span>
+          </div>
+          <span class="aq-badge">Open Source</span>
+        </div>
+        <div class="aq-panel__body aq-grid-2">
+          <div class="aq-well">
+            <h3>Why Auraliq Exists</h3>
+            <p>
+              Auraliq was built to put the listener back in control: prioritizing personal local
+              libraries, open integrations, deep visual customization, and zero advertisements
+              inside a fast native Rust desktop shell.
+            </p>
+          </div>
+          <div class="aq-well">
+            <h3>Privacy &amp; Security Guarantees</h3>
+            <p>
+              Zero telemetry by default. Optional API keys live in Windows Credential Manager
+              (<code>keyring</code>). Remote stream and download URLs are validated against SSRF and
+              private-IP blocklists, and live CSS blocks external network imports.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" class="aq-panel" aria-labelledby="faq-heading">
+        <div class="aq-panel__header">
+          <div class="aq-panel__title-wrap">
+            <span class="aq-led" aria-hidden="true"></span>
+            <span id="faq-heading">Frequently Asked Questions</span>
+          </div>
+          <span class="aq-badge">FAQ</span>
+        </div>
+        <div class="aq-panel__body aq-faq">
+          <details open>
+            <summary>Can Auraliq download tracks from YouTube or Spotify?</summary>
+            <p>
+              No. Auraliq strictly respects platform Terms of Service. Downloads are enabled only
+              for open or artist-permitted sources like Internet Archive and Creative Commons
+              Jamendo tracks. YouTube opens externally for playback.
+            </p>
+          </details>
+          <details>
+            <summary>Does Auraliq work completely offline?</summary>
+            <p>
+              Yes. Your local music library, SQLite FTS5 search, playlists, 5-band EQ, local
+              <code>.lrc</code> sidecar lyrics, and LRU-cached tracks work offline, and you can
+              toggle <strong>Offline Mode</strong> in Downloads &amp; Cache.
+            </p>
+          </details>
+          <details>
+            <summary>Which audio formats are supported?</summary>
+            <p>
+              MP3, FLAC, WAV, OGG/Vorbis, Opus, AAC/M4A, and ALAC via <code>symphonia</code>. WMA is
+              explicitly unsupported and rejected cleanly.
+            </p>
+          </details>
+          <details>
+            <summary>Are my API keys or listening history uploaded anywhere?</summary>
+            <p>
+              No. Listening history stays in your local SQLite database, and optional BYOK keys for
+              Jamendo, Freesound, or YouTube are stored in Windows Credential Manager.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="aq-footer">
+      <strong>Auraliq</strong> — Your music. Your frequency. • MIT License •
+      <a href="https://github.com/JustyPixels/auraliq" target="_blank" rel="noreferrer">GitHub</a>
+      •
+      <a
+        href="https://github.com/JustyPixels/auraliq/blob/main/ROADMAP.md"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Roadmap
+      </a>
+      •
+      <a
+        href="https://github.com/JustyPixels/auraliq/blob/main/SECURITY.md"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Security
+      </a>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

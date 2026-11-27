@@ -114,11 +114,11 @@
 
 ---
 
-## Milestone 12 — Website & Documentation (`0.8.x`)
+## Milestone 12 — Website & Documentation (`0.8.1`) [COMPLETED]
 
-- [ ] Build static retro project website (`website/`) with Downloads, Features, Roadmap, About, FAQ
-- [ ] Configure automatic GitHub Pages deployment workflow
-- [ ] Capture real application screenshots and update `README.md`
+- [x] Build static retro project website (`website/`) with Downloads, Features, Roadmap, About, FAQ
+- [x] Configure automatic GitHub Pages deployment workflow (`.github/workflows/pages.yml`)
+- [x] Capture real application screenshots (`docs/screenshots/auraliq-home.png`) and update `README.md`
 
 ---
 

@@ -22,7 +22,7 @@ export function HomePage({ appInfo, runtimeStatus, ipcError, onOpenSettings }: H
     <>
       <Panel
         title="Signal Deck"
-        badge={<Badge tone="accent">v{appInfo?.version ?? "0.8.0"}</Badge>}
+        badge={<Badge tone="accent">v{appInfo?.version ?? "0.8.1"}</Badge>}
         ledActive={runtimeStatus === "tauri"}
         headerActions={
           <Button size="sm" variant="secondary" onClick={onOpenSettings}>
@@ -59,7 +59,7 @@ export function HomePage({ appInfo, runtimeStatus, ipcError, onOpenSettings }: H
             </div>
             <div className="aq-kv-item">
               <span className="aq-kv-label">Milestone</span>
-              <span className="aq-kv-val">M11 Lyrics, EQ &amp; DSP</span>
+              <span className="aq-kv-val">M12 Website &amp; Docs</span>
             </div>
           </div>
         </div>

@@ -5,6 +5,15 @@ All notable changes to **Auraliq** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-11-27
+
+### Added
+
+- **Milestone 12 (Website & Documentation)**:
+  - Built static 1990s retro purplish project website (`website/index.html`, `website/styles.css`, `website/app.js`) with Downloads, Features, Supported Music Sources, Roadmap, About, FAQ, interactive theme preview, and CRT scanlines toggle.
+  - Added automated GitHub Pages deployment workflow (`.github/workflows/pages.yml`).
+  - Captured real application screenshot (`docs/screenshots/auraliq-home.png`) and updated `README.md` and `ROADMAP.md`.
+
 ## [0.8.0] - 2026-11-27
 
 ### Added
