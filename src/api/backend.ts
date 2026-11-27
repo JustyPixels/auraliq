@@ -3,6 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import type {
   AlbumSummary,
   ArtistSummary,
+  AudioDeviceInfo,
   GenreSummary,
   LibraryFolder,
   PlaybackSnapshot,
@@ -10,6 +11,7 @@ import type {
   PlaylistRecord,
   ScanSummary,
   TrackRecord,
+  VisualizerFrame,
 } from "../types/music";
 
 export function isTauriRuntime(): boolean {
@@ -99,6 +101,9 @@ export const backendApi = {
   setVolume: (volume: number) => invoke<void>("set_volume", { volume }),
   setMuted: (muted: boolean) => invoke<void>("set_muted", { muted }),
   getPlaybackStatus: () => invoke<PlaybackSnapshot>("get_playback_status"),
+  listAudioDevices: () => invoke<AudioDeviceInfo[]>("list_audio_devices"),
+  setAudioDevice: (deviceName: string | null) => invoke<void>("set_audio_device", { deviceName }),
+  getVisualizerFrame: () => invoke<VisualizerFrame>("get_visualizer_frame"),
   loadPlaybackState: () => invoke<PlaybackStateRecord>("load_playback_state"),
   savePlaybackState: (playbackState: PlaybackStateRecord) =>
     invoke<void>("save_playback_state", { playbackState }),

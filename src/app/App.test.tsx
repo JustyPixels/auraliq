@@ -11,6 +11,10 @@ vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: vi.fn((p: string) => p),
 }));
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(() => {}),
+}));
+
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
   save: vi.fn(),
@@ -62,9 +66,12 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Layout & Sidebar" }));
     expect(screen.getByLabelText("Default Landing Page")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Playback" }));
+    expect(screen.getByLabelText("Selected Output Device")).toBeInTheDocument();
   });
 
-  it("toggles sidebar, right panel, and shortcuts modal", () => {
+  it("toggles sidebar, right panel queue/visualizer, and shortcuts modal", () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
@@ -72,6 +79,9 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle queue panel" }));
     expect(screen.getByText("Playback Queue Empty")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle visualizer panel" }));
+    expect(screen.getByLabelText("Audio visualizer")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
     expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();

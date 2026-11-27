@@ -1,5 +1,6 @@
-import { ArrowDown, ArrowUp, Eye, EyeOff, Pin, RotateCcw } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, Pin, RefreshCw, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
+import { isTauriRuntime } from "../api/backend";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Panel } from "../components/Panel";
@@ -14,15 +15,17 @@ import {
   MIN_SIDEBAR_WIDTH,
   useLayoutStore,
 } from "../stores/useLayoutStore";
+import { usePlayerStore } from "../stores/usePlayerStore";
 import {
   formatKeyEvent,
   SHORTCUT_DEFINITIONS,
   type ShortcutActionId,
   useShortcutsStore,
 } from "../stores/useShortcutsStore";
+import type { VisualizerStyle } from "../types/music";
 import type { AppInfo } from "../types/system";
 
-type SettingsTab = "appearance" | "layout" | "providers" | "shortcuts" | "system";
+type SettingsTab = "appearance" | "playback" | "layout" | "providers" | "shortcuts" | "system";
 
 interface SettingsPageProps {
   appInfo: AppInfo | null;
@@ -52,6 +55,19 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
   } = useLayoutStore();
 
   const { bindings, setBinding, resetShortcuts } = useShortcutsStore();
+  const {
+    audioDevices,
+    selectedAudioDevice,
+    notificationsEnabled,
+    visualizerStyle,
+    lowPerformanceVisualizer,
+    refreshAudioDevices,
+    selectAudioDevice,
+    setNotificationsEnabled,
+    setVisualizerStyle,
+    setLowPerformanceVisualizer,
+  } = usePlayerStore();
+  const inTauri = isTauriRuntime();
 
   useEffect(() => {
     if (!capturingId) {
@@ -84,6 +100,7 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
         {(
           [
             ["appearance", "Appearance"],
+            ["playback", "Playback"],
             ["layout", "Layout & Sidebar"],
             ["providers", "Providers"],
             ["shortcuts", "Shortcuts"],
@@ -131,6 +148,96 @@ export function SettingsPage({ appInfo, runtimeStatus }: SettingsPageProps) {
             </div>
           </Panel>
         </>
+      )}
+
+      {activeTab === "playback" && (
+        <div className="aq-grid-2">
+          <Panel
+            title="Audio Output Device"
+            ledActive={inTauri}
+            headerActions={
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={!inTauri}
+                title={!inTauri ? "Requires desktop Tauri runtime" : "Refresh output devices"}
+                onClick={() => void refreshAudioDevices()}
+              >
+                <RefreshCw size={14} />
+                Refresh
+              </Button>
+            }
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <label htmlFor="aq-audio-device" className="aq-kv-label">
+                Selected Output Device
+              </label>
+              <select
+                id="aq-audio-device"
+                className="aq-select"
+                disabled={!inTauri}
+                value={selectedAudioDevice ?? ""}
+                onChange={(e) => void selectAudioDevice(e.target.value || null)}
+              >
+                <option value="">System Default</option>
+                {audioDevices.map((dev) => (
+                  <option key={dev.name} value={dev.name}>
+                    {dev.name} {dev.is_default ? "(Default)" : ""}
+                  </option>
+                ))}
+              </select>
+              <span style={{ fontSize: "0.78rem", color: "var(--aq-muted)" }}>
+                Automatic fallback to System Default activates if a selected device disconnects.
+              </span>
+            </div>
+          </Panel>
+
+          <Panel title="Notifications & Visualizer" ledActive>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+              <div className="aq-row-wrap">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  active={notificationsEnabled}
+                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                >
+                  Playback Notifications: {notificationsEnabled ? "On" : "Off"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  active={lowPerformanceVisualizer}
+                  onClick={() => setLowPerformanceVisualizer(!lowPerformanceVisualizer)}
+                >
+                  Low-Performance Visualizer: {lowPerformanceVisualizer ? "On" : "Off"}
+                </Button>
+              </div>
+
+              <div className="aq-row-wrap">
+                <span className="aq-kv-label" style={{ margin: 0 }}>
+                  Visualizer Style:
+                </span>
+                {(
+                  [
+                    ["bars", "Retro Bars"],
+                    ["scope", "CRT Scope"],
+                    ["cassette", "Cassette Reels"],
+                  ] as readonly [VisualizerStyle, string][]
+                ).map(([id, label]) => (
+                  <Button
+                    key={id}
+                    size="sm"
+                    variant="secondary"
+                    active={visualizerStyle === id}
+                    onClick={() => setVisualizerStyle(id)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </Panel>
+        </div>
       )}
 
       {activeTab === "layout" && (

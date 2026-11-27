@@ -1,6 +1,9 @@
 use tauri::State;
 
-use crate::audio::PlaybackSnapshot;
+use crate::audio::{
+    list_audio_devices as enumerate_audio_devices, AudioDeviceInfo, PlaybackSnapshot,
+    VisualizerFrame,
+};
 use crate::database::models::PlaybackStateRecord;
 use crate::error::AppError;
 use crate::AppState;
@@ -11,7 +14,7 @@ pub fn play_track(
     start_ms: Option<u64>,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let file_path = {
+    let track = {
         let db = state
             .db
             .lock()
@@ -20,25 +23,46 @@ pub fn play_track(
             .get_track(track_id)?
             .ok_or_else(|| AppError::NotFound(format!("track {track_id}")))?;
         db.record_play(track_id)?;
-        track.file_path
+        track
     };
 
-    state.audio.load_and_play(file_path, start_ms.unwrap_or(0))
+    let pos = start_ms.unwrap_or(0);
+    state.audio.load_and_play(track.file_path, pos)?;
+    state.media_session.update_metadata(
+        &track.title,
+        &track.artist,
+        &track.album,
+        track.duration_ms.max(0) as u64,
+    );
+    state.media_session.update_playback("playing", pos);
+    Ok(())
 }
 
 #[tauri::command]
 pub fn pause_playback(state: State<'_, AppState>) -> Result<(), AppError> {
-    state.audio.pause()
+    state.audio.pause()?;
+    let snap = state.audio.snapshot();
+    state
+        .media_session
+        .update_playback("paused", snap.position_ms);
+    Ok(())
 }
 
 #[tauri::command]
 pub fn resume_playback(state: State<'_, AppState>) -> Result<(), AppError> {
-    state.audio.play()
+    state.audio.play()?;
+    let snap = state.audio.snapshot();
+    state
+        .media_session
+        .update_playback("playing", snap.position_ms);
+    Ok(())
 }
 
 #[tauri::command]
 pub fn stop_playback(state: State<'_, AppState>) -> Result<(), AppError> {
-    state.audio.stop()
+    state.audio.stop()?;
+    state.media_session.update_playback("stopped", 0);
+    Ok(())
 }
 
 #[tauri::command]
@@ -59,6 +83,24 @@ pub fn set_muted(muted: bool, state: State<'_, AppState>) {
 #[tauri::command]
 pub fn get_playback_status(state: State<'_, AppState>) -> PlaybackSnapshot {
     state.audio.snapshot()
+}
+
+#[tauri::command]
+pub fn list_audio_devices() -> Vec<AudioDeviceInfo> {
+    enumerate_audio_devices()
+}
+
+#[tauri::command]
+pub fn set_audio_device(
+    device_name: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    state.audio.select_output_device(device_name)
+}
+
+#[tauri::command]
+pub fn get_visualizer_frame(state: State<'_, AppState>) -> VisualizerFrame {
+    state.audio.visualizer_frame()
 }
 
 #[tauri::command]

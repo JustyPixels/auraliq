@@ -57,13 +57,14 @@
 
 ---
 
-## Milestone 5 — Player & Audio Experience (`0.3.0`)
+## Milestone 5 — Player & Audio Experience (`0.3.0`) [COMPLETED]
 
-- [ ] Complete playback controls (play/pause/stop/prev/next/seek/volume/mute/shuffle/repeat)
-- [ ] Implement queue management (add, play next, reorder, clear, persist)
-- [ ] Integrate Windows SMTC & hardware media keys (`souvlaki`)
-- [ ] Implement audio output device selection and error recovery
-- [ ] Implement FFT tap (`realfft`) and Canvas audio visualizer foundation
+- [x] Complete playback controls (play/pause/stop/prev/next/seek/volume/mute/shuffle/repeat)
+- [x] Implement queue management (add, play next, reorder, clear, persist)
+- [x] Integrate Windows SMTC & hardware media keys (`souvlaki`)
+- [x] Implement audio output device selection and error recovery
+- [x] Implement FFT tap (`realfft`) and Canvas audio visualizer foundation (`Bars`, `Scope`, `Cassette`)
+- [x] Implement playback notifications (`PlaybackToast`)
 
 ---
 

@@ -90,3 +90,16 @@ export interface ScanSummary {
   missing: number;
   errors: string[];
 }
+
+export interface AudioDeviceInfo {
+  name: string;
+  is_default: boolean;
+}
+
+export interface VisualizerFrame {
+  bars: number[];
+  waveform: number[];
+  peak: number;
+}
+
+export type VisualizerStyle = "bars" | "scope" | "cassette";

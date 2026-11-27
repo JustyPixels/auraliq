@@ -1,3 +1,4 @@
+pub mod fft;
 pub mod resampler;
 
 use std::collections::VecDeque;
@@ -23,7 +24,31 @@ use symphonia::core::units::Time;
 use symphonia::default::{get_codecs, get_probe};
 
 use crate::error::AppError;
+pub use fft::{SpectrumAnalyzer, VisualizerFrame, FFT_SIZE};
 use resampler::resample_to_stereo;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AudioDeviceInfo {
+    pub name: String,
+    pub is_default: bool,
+}
+
+pub fn list_audio_devices() -> Vec<AudioDeviceInfo> {
+    let host = cpal::default_host();
+    let default_name = host.default_output_device().and_then(|d| d.name().ok());
+
+    let Ok(devices) = host.output_devices() else {
+        return Vec::new();
+    };
+
+    devices
+        .filter_map(|d| d.name().ok())
+        .map(|name| AudioDeviceInfo {
+            is_default: default_name.as_deref() == Some(name.as_str()),
+            name,
+        })
+        .collect()
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PlaybackSnapshot {
@@ -34,6 +59,7 @@ pub struct PlaybackSnapshot {
     pub volume: f32,
     pub muted: bool,
     pub track_ended: bool,
+    pub output_device: Option<String>,
     pub last_error: Option<String>,
 }
 
@@ -47,6 +73,7 @@ impl Default for PlaybackSnapshot {
             volume: 0.8,
             muted: false,
             track_ended: false,
+            output_device: None,
             last_error: None,
         }
     }
@@ -58,11 +85,13 @@ enum AudioCommand {
     Pause,
     Stop,
     Seek { position_ms: u64 },
+    SelectOutputDevice { device_name: Option<String> },
 }
 
 pub struct AudioEngine {
     tx: Sender<AudioCommand>,
     snapshot: Arc<Mutex<PlaybackSnapshot>>,
+    visualizer: Arc<Mutex<VisualizerFrame>>,
     volume_bits: Arc<AtomicU32>,
     muted: Arc<AtomicBool>,
 }
@@ -138,16 +167,27 @@ fn open_symphonia_decoder(path: &Path) -> Result<LoadedDecoder, AppError> {
 }
 
 fn init_cpal_output(
+    preferred_device: Option<&str>,
     pcm_queue: Arc<Mutex<VecDeque<f32>>>,
     playing_flag: Arc<AtomicBool>,
     volume_bits: Arc<AtomicU32>,
     muted_flag: Arc<AtomicBool>,
-) -> Result<(Stream, u32), AppError> {
+    stream_error_flag: Arc<AtomicBool>,
+) -> Result<(Stream, u32, String), AppError> {
     let host = cpal::default_host();
-    let device = host
-        .default_output_device()
-        .ok_or_else(|| AppError::Audio("No default audio output device available".to_string()))?;
 
+    let device = preferred_device
+        .and_then(|target| {
+            host.output_devices()
+                .ok()
+                .and_then(|mut devs| devs.find(|d| d.name().ok().as_deref() == Some(target)))
+        })
+        .or_else(|| host.default_output_device())
+        .ok_or_else(|| AppError::Audio("No audio output device available".to_string()))?;
+
+    let device_name = device
+        .name()
+        .unwrap_or_else(|_| "Default Output".to_string());
     let supported = device
         .default_output_config()
         .map_err(|e| AppError::Audio(format!("Output config error: {e}")))?;
@@ -155,6 +195,11 @@ fn init_cpal_output(
     let sample_rate = supported.sample_rate().0;
     let channels = supported.channels() as usize;
     let config: StreamConfig = supported.into();
+
+    let err_flag_cb = Arc::clone(&stream_error_flag);
+    let err_callback = move |_err: cpal::StreamError| {
+        err_flag_cb.store(true, Ordering::Relaxed);
+    };
 
     let stream = match sample_format {
         SampleFormat::F32 => device.build_output_stream(
@@ -169,7 +214,7 @@ fn init_cpal_output(
                     &muted_flag,
                 );
             },
-            |_| {},
+            err_callback,
             None,
         ),
         SampleFormat::I16 => device.build_output_stream(
@@ -188,7 +233,7 @@ fn init_cpal_output(
                     *dst = (src.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                 }
             },
-            |_| {},
+            err_callback,
             None,
         ),
         SampleFormat::U16 => device.build_output_stream(
@@ -207,7 +252,7 @@ fn init_cpal_output(
                     *dst = (((src.clamp(-1.0, 1.0) + 1.0) * 0.5) * u16::MAX as f32) as u16;
                 }
             },
-            |_| {},
+            err_callback,
             None,
         ),
         other => {
@@ -221,7 +266,8 @@ fn init_cpal_output(
     stream
         .play()
         .map_err(|e| AppError::Audio(format!("Failed to start audio stream: {e}")))?;
-    Ok((stream, sample_rate))
+    stream_error_flag.store(false, Ordering::Relaxed);
+    Ok((stream, sample_rate, device_name))
 }
 
 fn fill_output_f32(
@@ -268,40 +314,113 @@ fn fill_output_f32(
     }
 }
 
+fn reset_visualizer(visualizer: &Arc<Mutex<VisualizerFrame>>) {
+    if let Ok(mut vis) = visualizer.lock() {
+        *vis = VisualizerFrame::default();
+    }
+}
+
 fn audio_worker_loop(
     rx: Receiver<AudioCommand>,
     snapshot: Arc<Mutex<PlaybackSnapshot>>,
+    visualizer: Arc<Mutex<VisualizerFrame>>,
     volume_bits: Arc<AtomicU32>,
     muted_flag: Arc<AtomicBool>,
 ) {
     let pcm_queue: Arc<Mutex<VecDeque<f32>>> =
         Arc::new(Mutex::new(VecDeque::with_capacity(48_000)));
     let playing_flag = Arc::new(AtomicBool::new(false));
+    let stream_error_flag = Arc::new(AtomicBool::new(false));
+    let mut preferred_device: Option<String> = None;
     let mut output_stream: Option<(Stream, u32)> = None;
     let mut active_decoder: Option<LoadedDecoder> = None;
     let mut eof_reached = false;
     let mut decoded_frames_played: u64 = 0;
 
+    let mut analyzer = SpectrumAnalyzer::new();
+    let mut mono_ring: VecDeque<f32> = VecDeque::with_capacity(FFT_SIZE * 2);
+
     loop {
+        if stream_error_flag.swap(false, Ordering::Relaxed) {
+            output_stream = None;
+            match init_cpal_output(
+                preferred_device.as_deref(),
+                Arc::clone(&pcm_queue),
+                Arc::clone(&playing_flag),
+                Arc::clone(&volume_bits),
+                Arc::clone(&muted_flag),
+                Arc::clone(&stream_error_flag),
+            ) {
+                Ok((stream, rate, dev_name)) => {
+                    output_stream = Some((stream, rate));
+                    if let Ok(mut snap) = snapshot.lock() {
+                        snap.output_device = Some(dev_name);
+                    }
+                }
+                Err(e) => {
+                    playing_flag.store(false, Ordering::Relaxed);
+                    reset_visualizer(&visualizer);
+                    if let Ok(mut snap) = snapshot.lock() {
+                        snap.status = "error".to_string();
+                        snap.last_error = Some(format!("Audio device error: {e}"));
+                    }
+                }
+            }
+        }
+
         while let Ok(cmd) = rx.try_recv() {
             match cmd {
+                AudioCommand::SelectOutputDevice { device_name } => {
+                    preferred_device = device_name;
+                    output_stream = None;
+                    match init_cpal_output(
+                        preferred_device.as_deref(),
+                        Arc::clone(&pcm_queue),
+                        Arc::clone(&playing_flag),
+                        Arc::clone(&volume_bits),
+                        Arc::clone(&muted_flag),
+                        Arc::clone(&stream_error_flag),
+                    ) {
+                        Ok((stream, rate, dev_name)) => {
+                            output_stream = Some((stream, rate));
+                            if let Ok(mut snap) = snapshot.lock() {
+                                snap.output_device = Some(dev_name);
+                                snap.last_error = None;
+                            }
+                        }
+                        Err(e) => {
+                            if let Ok(mut snap) = snapshot.lock() {
+                                snap.last_error = Some(e.to_string());
+                            }
+                        }
+                    }
+                }
                 AudioCommand::LoadAndPlay { path, start_ms } => {
                     playing_flag.store(false, Ordering::Relaxed);
                     if let Ok(mut q) = pcm_queue.lock() {
                         q.clear();
                     }
+                    mono_ring.clear();
                     active_decoder = None;
                     eof_reached = false;
 
                     if output_stream.is_none() {
                         match init_cpal_output(
+                            preferred_device.as_deref(),
                             Arc::clone(&pcm_queue),
                             Arc::clone(&playing_flag),
                             Arc::clone(&volume_bits),
                             Arc::clone(&muted_flag),
+                            Arc::clone(&stream_error_flag),
                         ) {
-                            Ok(s) => output_stream = Some(s),
+                            Ok((stream, rate, dev_name)) => {
+                                output_stream = Some((stream, rate));
+                                if let Ok(mut snap) = snapshot.lock() {
+                                    snap.output_device = Some(dev_name);
+                                }
+                            }
                             Err(e) => {
+                                reset_visualizer(&visualizer);
                                 if let Ok(mut snap) = snapshot.lock() {
                                     snap.status = "error".to_string();
                                     snap.last_error = Some(e.to_string());
@@ -341,6 +460,7 @@ fn audio_worker_loop(
                             playing_flag.store(true, Ordering::Relaxed);
                         }
                         Err(e) => {
+                            reset_visualizer(&visualizer);
                             if let Ok(mut snap) = snapshot.lock() {
                                 snap.status = "error".to_string();
                                 snap.current_path = Some(path);
@@ -360,6 +480,7 @@ fn audio_worker_loop(
                 }
                 AudioCommand::Pause => {
                     playing_flag.store(false, Ordering::Relaxed);
+                    reset_visualizer(&visualizer);
                     if let Ok(mut snap) = snapshot.lock() {
                         if snap.status == "playing" {
                             snap.status = "paused".to_string();
@@ -371,6 +492,8 @@ fn audio_worker_loop(
                     active_decoder = None;
                     eof_reached = false;
                     decoded_frames_played = 0;
+                    mono_ring.clear();
+                    reset_visualizer(&visualizer);
                     if let Ok(mut q) = pcm_queue.lock() {
                         q.clear();
                     }
@@ -399,6 +522,7 @@ fn audio_worker_loop(
                             if let Ok(mut q) = pcm_queue.lock() {
                                 q.clear();
                             }
+                            mono_ring.clear();
                             let dst_rate =
                                 output_stream.as_ref().map(|(_, r)| *r).unwrap_or(44_100);
                             decoded_frames_played = (position_ms * u64::from(dst_rate)) / 1000;
@@ -414,7 +538,7 @@ fn audio_worker_loop(
 
         if playing_flag.load(Ordering::Relaxed) {
             let dst_rate = output_stream.as_ref().map(|(_, r)| *r).unwrap_or(44_100);
-            let max_buffered_samples = (dst_rate as usize) * 2; // 1.0s stereo cap
+            let max_buffered_samples = (dst_rate as usize) * 2;
             let queued_len = pcm_queue.lock().map(|q| q.len()).unwrap_or(0);
 
             if !eof_reached && queued_len < max_buffered_samples / 2 {
@@ -436,6 +560,20 @@ fn audio_worker_loop(
                                             loaded.src_rate,
                                             dst_rate,
                                         );
+                                        for pair in stereo.chunks_exact(2) {
+                                            mono_ring.push_back((pair[0] + pair[1]) * 0.5);
+                                            if mono_ring.len() > FFT_SIZE {
+                                                mono_ring.pop_front();
+                                            }
+                                        }
+                                        if mono_ring.len() == FFT_SIZE {
+                                            let slice: Vec<f32> =
+                                                mono_ring.iter().copied().collect();
+                                            let frame = analyzer.analyze(&slice);
+                                            if let Ok(mut vis) = visualizer.lock() {
+                                                *vis = frame;
+                                            }
+                                        }
                                         let added_frames = (stereo.len() / 2) as u64;
                                         if let Ok(mut q) = pcm_queue.lock() {
                                             q.extend(stereo);
@@ -461,6 +599,7 @@ fn audio_worker_loop(
             if eof_reached && remaining_frames == 0 {
                 playing_flag.store(false, Ordering::Relaxed);
                 active_decoder = None;
+                reset_visualizer(&visualizer);
                 if let Ok(mut snap) = snapshot.lock() {
                     snap.status = "ended".to_string();
                     snap.position_ms = snap.duration_ms;
@@ -479,23 +618,26 @@ impl AudioEngine {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::channel();
         let snapshot = Arc::new(Mutex::new(PlaybackSnapshot::default()));
+        let visualizer = Arc::new(Mutex::new(VisualizerFrame::default()));
         let volume_bits = Arc::new(AtomicU32::new(0.8f32.to_bits()));
         let muted = Arc::new(AtomicBool::new(false));
 
         let snap_clone = Arc::clone(&snapshot);
+        let vis_clone = Arc::clone(&visualizer);
         let vol_clone = Arc::clone(&volume_bits);
         let mute_clone = Arc::clone(&muted);
 
         thread::Builder::new()
             .name("auraliq-audio".to_string())
             .spawn(move || {
-                audio_worker_loop(rx, snap_clone, vol_clone, mute_clone);
+                audio_worker_loop(rx, snap_clone, vis_clone, vol_clone, mute_clone);
             })
             .expect("failed to spawn audio worker thread");
 
         Self {
             tx,
             snapshot,
+            visualizer,
             volume_bits,
             muted,
         }
@@ -531,6 +673,12 @@ impl AudioEngine {
             .map_err(|e| AppError::Audio(e.to_string()))
     }
 
+    pub fn select_output_device(&self, device_name: Option<String>) -> Result<(), AppError> {
+        self.tx
+            .send(AudioCommand::SelectOutputDevice { device_name })
+            .map_err(|e| AppError::Audio(e.to_string()))
+    }
+
     pub fn set_volume(&self, volume: f32) {
         let clamped = volume.clamp(0.0, 1.0);
         self.volume_bits.store(clamped.to_bits(), Ordering::Relaxed);
@@ -549,6 +697,13 @@ impl AudioEngine {
     pub fn snapshot(&self) -> PlaybackSnapshot {
         self.snapshot.lock().map(|s| s.clone()).unwrap_or_default()
     }
+
+    pub fn visualizer_frame(&self) -> VisualizerFrame {
+        self.visualizer
+            .lock()
+            .map(|v| v.clone())
+            .unwrap_or_default()
+    }
 }
 
 impl Default for AudioEngine {
@@ -562,6 +717,11 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::tempdir;
+
+    #[test]
+    fn lists_audio_devices_without_panicking() {
+        let _devices = list_audio_devices();
+    }
 
     #[test]
     fn decodes_wav_samples_and_rejects_wma() {

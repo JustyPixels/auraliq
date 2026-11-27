@@ -1,6 +1,6 @@
 [package]
 name = "auraliq"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 description = "Retro-inspired unified music hub"
@@ -24,6 +24,8 @@ cpal = "0.15.3"
 lofty = "0.25.5"
 walkdir = "2.5.1"
 sha2 = "0.10"
+souvlaki = { version = "0.9.3", default-features = false }
+realfft = "3.5.1"
 
 [dev-dependencies]
 tempfile = "3"

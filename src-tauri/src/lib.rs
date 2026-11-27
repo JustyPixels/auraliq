@@ -4,6 +4,7 @@ pub mod database;
 pub mod error;
 pub mod library;
 pub mod metadata;
+pub mod platform;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -12,10 +13,12 @@ use tauri::Manager;
 
 use audio::AudioEngine;
 use database::Database;
+use platform::media_keys::MediaSession;
 
 pub struct AppState {
     pub db: Mutex<Database>,
     pub audio: AudioEngine,
+    pub media_session: MediaSession,
     pub artwork_dir: PathBuf,
 }
 
@@ -33,9 +36,12 @@ pub fn run() {
             let db_path = data_dir.join("auraliq.db");
             let db = Database::open(&db_path).map_err(|e| std::io::Error::other(e.to_string()))?;
 
+            let media_session = MediaSession::init(app.handle());
+
             app.manage(AppState {
                 db: Mutex::new(db),
                 audio: AudioEngine::new(),
+                media_session,
                 artwork_dir,
             });
             Ok(())
@@ -70,6 +76,9 @@ pub fn run() {
             commands::player::set_volume,
             commands::player::set_muted,
             commands::player::get_playback_status,
+            commands::player::list_audio_devices,
+            commands::player::set_audio_device,
+            commands::player::get_visualizer_frame,
             commands::player::load_playback_state,
             commands::player::save_playback_state,
         ])

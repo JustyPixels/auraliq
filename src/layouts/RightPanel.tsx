@@ -1,9 +1,10 @@
-import { AudioLines, Info, ListOrdered, Play, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Info, ListOrdered, Play, Trash2, X } from "lucide-react";
 import { formatDurationMs } from "../api/backend";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { usePlayerStore } from "../stores/usePlayerStore";
+import { AudioVisualizer } from "../visualizers/AudioVisualizer";
 
 export type RightPanelTab = "queue" | "info" | "visualizer";
 
@@ -14,8 +15,15 @@ interface RightPanelProps {
 }
 
 export function RightPanel({ activeTab, onSelectTab, onClose }: RightPanelProps) {
-  const { queue, queueIndex, currentTrack, playQueueIndex, removeFromQueue, clearQueue } =
-    usePlayerStore();
+  const {
+    queue,
+    queueIndex,
+    currentTrack,
+    playQueueIndex,
+    moveQueueItem,
+    removeFromQueue,
+    clearQueue,
+  } = usePlayerStore();
 
   return (
     <aside className="aq-right-panel" aria-label="Context panel">
@@ -99,6 +107,24 @@ export function RightPanel({ activeTab, onSelectTab, onClose }: RightPanelProps)
                   <Button
                     size="icon"
                     variant="ghost"
+                    disabled={idx === 0}
+                    aria-label={`Move ${track.title} up in queue`}
+                    onClick={() => moveQueueItem(idx, idx - 1)}
+                  >
+                    <ArrowUp size={12} />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    disabled={idx === queue.length - 1}
+                    aria-label={`Move ${track.title} down in queue`}
+                    onClick={() => moveQueueItem(idx, idx + 1)}
+                  >
+                    <ArrowDown size={12} />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     aria-label={`Remove ${track.title} from queue`}
                     onClick={() => removeFromQueue(idx)}
                   >
@@ -151,14 +177,7 @@ export function RightPanel({ activeTab, onSelectTab, onClose }: RightPanelProps)
             />
           ))}
 
-        {activeTab === "visualizer" && (
-          <EmptyState
-            icon={<AudioLines size={20} />}
-            title="Visualizer Standby"
-            description="Real-time FFT spectrum and CRT oscilloscope render here in Milestone 5."
-            milestoneTag="Milestone 5"
-          />
-        )}
+        {activeTab === "visualizer" && <AudioVisualizer />}
       </div>
     </aside>
   );

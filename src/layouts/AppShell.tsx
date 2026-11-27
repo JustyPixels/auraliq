@@ -2,6 +2,7 @@ import { HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
+import { PlaybackToast } from "../components/PlaybackToast";
 import { ShortcutsModal } from "../components/ShortcutsModal";
 import { useAppInfo } from "../hooks/useAppInfo";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -145,6 +146,7 @@ export function AppShell() {
         onToggleRightPanelTab={toggleRightPanelTab}
       />
 
+      <PlaybackToast />
       <ShortcutsModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );

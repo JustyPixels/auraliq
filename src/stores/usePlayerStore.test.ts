@@ -96,4 +96,30 @@ describe("usePlayerStore", () => {
     expect(usePlayerStore.getState().queue).toHaveLength(0);
     expect(usePlayerStore.getState().currentTrack).toBeNull();
   });
+
+  it("reorders queue items while keeping queueIndex aligned with active track", async () => {
+    const t1 = makeTrack(1, "One");
+    const t2 = makeTrack(2, "Two");
+    const t3 = makeTrack(3, "Three");
+
+    await usePlayerStore.getState().playTrackList([t1, t2, t3], 1);
+    expect(usePlayerStore.getState().currentTrack?.id).toBe(2);
+    expect(usePlayerStore.getState().queueIndex).toBe(1);
+
+    usePlayerStore.getState().moveQueueItem(1, 0);
+    expect(usePlayerStore.getState().queue.map((t) => t.id)).toEqual([2, 1, 3]);
+    expect(usePlayerStore.getState().queueIndex).toBe(0);
+
+    usePlayerStore.getState().setNotificationsEnabled(false);
+    expect(usePlayerStore.getState().notificationsEnabled).toBe(false);
+
+    usePlayerStore.getState().setVisualizerStyle("scope");
+    expect(usePlayerStore.getState().visualizerStyle).toBe("scope");
+
+    usePlayerStore.getState().dismissToast();
+    expect(usePlayerStore.getState().toastMessage).toBeNull();
+
+    await usePlayerStore.getState().stopPlayback();
+    expect(usePlayerStore.getState().status).toBe("idle");
+  });
 });

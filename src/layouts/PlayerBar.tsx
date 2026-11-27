@@ -1,4 +1,5 @@
 import {
+  AudioLines,
   Disc3,
   Heart,
   Info,
@@ -10,6 +11,7 @@ import {
   Shuffle,
   SkipBack,
   SkipForward,
+  Square,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -44,6 +46,7 @@ export function PlayerBar({
     repeatMode,
     error,
     togglePlayPause,
+    stopPlayback,
     nextTrack,
     prevTrack,
     seek,
@@ -148,6 +151,16 @@ export function PlayerBar({
             size="icon"
             variant="ghost"
             disabled={!hasTrack}
+            aria-label="Stop"
+            title={hasTrack ? "Stop" : noTrackReason}
+            onClick={() => void stopPlayback()}
+          >
+            <Square size={14} />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            disabled={!hasTrack}
             aria-label="Next track"
             title={hasTrack ? "Next track" : noTrackReason}
             onClick={() => void nextTrack()}
@@ -217,6 +230,16 @@ export function PlayerBar({
           onClick={() => onToggleRightPanelTab("info")}
         >
           <Info size={16} />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          active={rightPanelOpen && rightPanelTab === "visualizer"}
+          aria-label="Toggle visualizer panel"
+          title="Toggle visualizer panel"
+          onClick={() => onToggleRightPanelTab("visualizer")}
+        >
+          <AudioLines size={16} />
         </Button>
       </div>
     </footer>

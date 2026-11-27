@@ -1,10 +1,67 @@
 import { create } from "zustand";
 import { backendApi, isTauriRuntime } from "../api/backend";
-import type { RepeatMode, TrackRecord } from "../types/music";
+import type { AudioDeviceInfo, RepeatMode, TrackRecord, VisualizerStyle } from "../types/music";
 
 export type PlaybackStatus = "idle" | "playing" | "paused" | "ended" | "error";
 
-export interface PlayerStore {
+export interface PlaybackToastMessage {
+  title: string;
+  subtitle: string;
+  tone: "accent" | "warn";
+}
+
+interface PlaybackPrefs {
+  notificationsEnabled: boolean;
+  visualizerStyle: VisualizerStyle;
+  lowPerformanceVisualizer: boolean;
+  selectedAudioDevice: string | null;
+}
+
+const PREFS_KEY = "auraliq.playbackPrefs.v1";
+
+function readPrefs(): PlaybackPrefs {
+  const defaults: PlaybackPrefs = {
+    notificationsEnabled: true,
+    visualizerStyle: "bars",
+    lowPerformanceVisualizer: false,
+    selectedAudioDevice: null,
+  };
+  try {
+    if (typeof localStorage === "undefined") {
+      return defaults;
+    }
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) {
+      return defaults;
+    }
+    const parsed = JSON.parse(raw) as Partial<PlaybackPrefs>;
+    return {
+      notificationsEnabled:
+        typeof parsed.notificationsEnabled === "boolean" ? parsed.notificationsEnabled : true,
+      visualizerStyle:
+        parsed.visualizerStyle === "scope" || parsed.visualizerStyle === "cassette"
+          ? parsed.visualizerStyle
+          : "bars",
+      lowPerformanceVisualizer: Boolean(parsed.lowPerformanceVisualizer),
+      selectedAudioDevice:
+        typeof parsed.selectedAudioDevice === "string" ? parsed.selectedAudioDevice : null,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+function writePrefs(prefs: PlaybackPrefs): void {
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export interface PlayerStore extends PlaybackPrefs {
   queue: TrackRecord[];
   queueIndex: number;
   currentTrack: TrackRecord | null;
@@ -16,14 +73,19 @@ export interface PlayerStore {
   shuffle: boolean;
   repeatMode: RepeatMode;
   error: string | null;
+  audioDevices: AudioDeviceInfo[];
+  toastMessage: PlaybackToastMessage | null;
   hydrate: (tracks: TrackRecord[]) => Promise<void>;
   playTrackList: (tracks: TrackRecord[], startIndex?: number) => Promise<void>;
   playQueueIndex: (index: number) => Promise<void>;
   addToQueue: (track: TrackRecord) => void;
   playNext: (track: TrackRecord) => void;
+  moveQueueItem: (fromIndex: number, toIndex: number) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => Promise<void>;
   togglePlayPause: () => Promise<void>;
+  stopPlayback: () => Promise<void>;
+  retryCurrentTrack: () => Promise<void>;
   nextTrack: () => Promise<void>;
   prevTrack: () => Promise<void>;
   seek: (positionMs: number) => Promise<void>;
@@ -32,6 +94,12 @@ export interface PlayerStore {
   toggleShuffle: () => void;
   cycleRepeatMode: () => void;
   pollStatus: () => Promise<void>;
+  refreshAudioDevices: () => Promise<void>;
+  selectAudioDevice: (deviceName: string | null) => Promise<void>;
+  setNotificationsEnabled: (enabled: boolean) => void;
+  setVisualizerStyle: (style: VisualizerStyle) => void;
+  setLowPerformanceVisualizer: (enabled: boolean) => void;
+  dismissToast: () => void;
   persistState: () => void;
 }
 
@@ -42,7 +110,19 @@ function normalizeStatus(status: string): PlaybackStatus {
   return "idle";
 }
 
+function pickPrefs(s: PlayerStore): PlaybackPrefs {
+  return {
+    notificationsEnabled: s.notificationsEnabled,
+    visualizerStyle: s.visualizerStyle,
+    lowPerformanceVisualizer: s.lowPerformanceVisualizer,
+    selectedAudioDevice: s.selectedAudioDevice,
+  };
+}
+
+const initialPrefs = readPrefs();
+
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
+  ...initialPrefs,
   queue: [],
   queueIndex: -1,
   currentTrack: null,
@@ -54,6 +134,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   shuffle: false,
   repeatMode: "off",
   error: null,
+  audioDevices: [],
+  toastMessage: null,
 
   persistState: () => {
     if (!isTauriRuntime()) {
@@ -96,6 +178,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       await backendApi.setVolume(saved.volume);
       await backendApi.setMuted(saved.muted);
 
+      const preferredDev = get().selectedAudioDevice;
+      if (preferredDev) {
+        await backendApi.setAudioDevice(preferredDev);
+      }
+
       set({
         queue,
         queueIndex,
@@ -119,6 +206,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     }
     const idx = Math.max(0, Math.min(startIndex, tracks.length - 1));
     const target = tracks[idx];
+    const notify = get().notificationsEnabled;
     set({
       queue: [...tracks],
       queueIndex: idx,
@@ -127,19 +215,27 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       durationMs: target.duration_ms,
       status: "playing",
       error: null,
+      toastMessage: notify
+        ? { title: target.title, subtitle: `${target.artist} • ${target.album}`, tone: "accent" }
+        : null,
     });
     if (isTauriRuntime()) {
       try {
         await backendApi.playTrack(target.id, 0);
       } catch (err) {
-        set({ status: "error", error: err instanceof Error ? err.message : String(err) });
+        const msg = err instanceof Error ? err.message : String(err);
+        set({
+          status: "error",
+          error: msg,
+          toastMessage: { title: "Playback Error", subtitle: msg, tone: "warn" },
+        });
       }
     }
     get().persistState();
   },
 
   playQueueIndex: async (index) => {
-    const { queue } = get();
+    const { queue, notificationsEnabled } = get();
     if (index < 0 || index >= queue.length) {
       return;
     }
@@ -151,12 +247,20 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       durationMs: target.duration_ms,
       status: "playing",
       error: null,
+      toastMessage: notificationsEnabled
+        ? { title: target.title, subtitle: `${target.artist} • ${target.album}`, tone: "accent" }
+        : null,
     });
     if (isTauriRuntime()) {
       try {
         await backendApi.playTrack(target.id, 0);
       } catch (err) {
-        set({ status: "error", error: err instanceof Error ? err.message : String(err) });
+        const msg = err instanceof Error ? err.message : String(err);
+        set({
+          status: "error",
+          error: msg,
+          toastMessage: { title: "Playback Error", subtitle: msg, tone: "warn" },
+        });
       }
     }
     get().persistState();
@@ -173,6 +277,34 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       const insertAt = state.queueIndex >= 0 ? state.queueIndex + 1 : 0;
       nextQueue.splice(insertAt, 0, track);
       return { queue: nextQueue };
+    });
+    get().persistState();
+  },
+
+  moveQueueItem: (fromIndex, toIndex) => {
+    set((state) => {
+      if (
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= state.queue.length ||
+        toIndex >= state.queue.length ||
+        fromIndex === toIndex
+      ) {
+        return state;
+      }
+      const nextQueue = [...state.queue];
+      const [moved] = nextQueue.splice(fromIndex, 1);
+      nextQueue.splice(toIndex, 0, moved);
+
+      let nextQueueIndex = state.queueIndex;
+      if (state.queueIndex === fromIndex) {
+        nextQueueIndex = toIndex;
+      } else if (fromIndex < state.queueIndex && toIndex >= state.queueIndex) {
+        nextQueueIndex -= 1;
+      } else if (fromIndex > state.queueIndex && toIndex <= state.queueIndex) {
+        nextQueueIndex += 1;
+      }
+      return { queue: nextQueue, queueIndex: nextQueueIndex };
     });
     get().persistState();
   },
@@ -237,6 +369,34 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       }
     }
     set({ status: "playing", error: null });
+  },
+
+  stopPlayback: async () => {
+    if (isTauriRuntime()) {
+      await backendApi.stopPlayback();
+    }
+    set({ status: "idle", positionMs: 0, error: null });
+    get().persistState();
+  },
+
+  retryCurrentTrack: async () => {
+    const { currentTrack, positionMs } = get();
+    if (!currentTrack) {
+      return;
+    }
+    set({ status: "playing", error: null, toastMessage: null });
+    if (isTauriRuntime()) {
+      try {
+        await backendApi.playTrack(currentTrack.id, positionMs);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        set({
+          status: "error",
+          error: msg,
+          toastMessage: { title: "Playback Error", subtitle: msg, tone: "warn" },
+        });
+      }
+    }
   },
 
   nextTrack: async () => {
@@ -329,11 +489,16 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     try {
       const snap = await backendApi.getPlaybackStatus();
       const nextStatus = normalizeStatus(snap.status);
+      const prevError = get().error;
       set({
         status: nextStatus,
         positionMs: snap.position_ms,
         durationMs: snap.duration_ms > 0 ? snap.duration_ms : get().durationMs,
         error: snap.last_error,
+        toastMessage:
+          snap.last_error && snap.last_error !== prevError
+            ? { title: "Audio Device / Playback Error", subtitle: snap.last_error, tone: "warn" }
+            : get().toastMessage,
       });
       if (snap.track_ended) {
         await get().nextTrack();
@@ -341,5 +506,56 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     } catch {
       // Ignore transient poll errors
     }
+  },
+
+  refreshAudioDevices: async () => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      const audioDevices = await backendApi.listAudioDevices();
+      set({ audioDevices });
+    } catch {
+      // Ignore device enumeration errors
+    }
+  },
+
+  selectAudioDevice: async (selectedAudioDevice) => {
+    set((state) => {
+      const next = { ...state, selectedAudioDevice };
+      writePrefs(pickPrefs(next));
+      return { selectedAudioDevice };
+    });
+    if (isTauriRuntime()) {
+      await backendApi.setAudioDevice(selectedAudioDevice);
+    }
+  },
+
+  setNotificationsEnabled: (notificationsEnabled) => {
+    set((state) => {
+      const next = { ...state, notificationsEnabled };
+      writePrefs(pickPrefs(next));
+      return { notificationsEnabled };
+    });
+  },
+
+  setVisualizerStyle: (visualizerStyle) => {
+    set((state) => {
+      const next = { ...state, visualizerStyle };
+      writePrefs(pickPrefs(next));
+      return { visualizerStyle };
+    });
+  },
+
+  setLowPerformanceVisualizer: (lowPerformanceVisualizer) => {
+    set((state) => {
+      const next = { ...state, lowPerformanceVisualizer };
+      writePrefs(pickPrefs(next));
+      return { lowPerformanceVisualizer };
+    });
+  },
+
+  dismissToast: () => {
+    set({ toastMessage: null });
   },
 }));
