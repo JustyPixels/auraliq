@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" fill="none">
+  <defs>
+    <linearGradient id="sbg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B0912" />
+      <stop offset="1" stop-color="#1A142D" />
+    </linearGradient>
+    <pattern id="sgrid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" stroke="#251E3B" stroke-width="1" />
+    </pattern>
+  </defs>
+  <rect width="1280" height="640" fill="url(#sbg)" />
+  <rect width="1280" height="640" fill="url(#sgrid)" opacity="0.45" />
+  <g transform="translate(536, 110) scale(0.4)">
+    <rect width="512" height="512" rx="108" fill="#171324" stroke="#3B305B" stroke-width="10" />
+    <circle cx="398" cy="114" r="14" fill="#38BDF8" />
+    <rect x="122" y="216" width="38" height="104" rx="10" fill="#7C3AED" />
+    <rect x="178" y="156" width="38" height="224" rx="10" fill="#8B5CF6" />
+    <rect x="237" y="108" width="38" height="304" rx="10" fill="#C4B5FD" />
+    <rect x="296" y="156" width="38" height="224" rx="10" fill="#8B5CF6" />
+    <rect x="352" y="216" width="38" height="104" rx="10" fill="#7C3AED" />
+  </g>
+  <text x="640" y="405" text-anchor="middle" fill="#F3EFFA" font-family="Segoe UI, system-ui, sans-serif" font-size="76" font-weight="700" letter-spacing="14">AURALIQ</text>
+  <text x="640" y="456" text-anchor="middle" fill="#C4B5FD" font-family="Consolas, ui-monospace, monospace" font-size="22" letter-spacing="5">YOUR MUSIC. YOUR FREQUENCY.</text>
+  <text x="640" y="516" text-anchor="middle" fill="#9489B8" font-family="Segoe UI, system-ui, sans-serif" font-size="20">Local Library  •  Compliant Online Playback  •  Retro Customization</text>
+</svg>

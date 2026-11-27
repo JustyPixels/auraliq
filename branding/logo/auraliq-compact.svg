@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" fill="none">
+  <g transform="translate(4, 8) scale(0.11)">
+    <rect width="512" height="512" rx="108" fill="#171324" stroke="#2E2646" stroke-width="12" />
+    <circle cx="398" cy="114" r="16" fill="#38BDF8" />
+    <rect x="122" y="216" width="38" height="104" rx="10" fill="#7C3AED" />
+    <rect x="178" y="156" width="38" height="224" rx="10" fill="#8B5CF6" />
+    <rect x="237" y="108" width="38" height="304" rx="10" fill="#C4B5FD" />
+    <rect x="296" y="156" width="38" height="224" rx="10" fill="#8B5CF6" />
+    <rect x="352" y="216" width="38" height="104" rx="10" fill="#7C3AED" />
+  </g>
+  <text x="76" y="46" fill="#F3EFFA" font-family="Segoe UI, system-ui, sans-serif" font-size="28" font-weight="700" letter-spacing="5">AURALIQ</text>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" fill="none">
+  <rect width="640" height="160" rx="20" fill="#F6F4FC" />
+  <g transform="translate(24, 20) scale(0.234)">
+    <rect width="512" height="512" rx="108" fill="#EAE6F5" stroke="#C4B5FD" stroke-width="10" />
+    <circle cx="398" cy="114" r="14" fill="#0284C7" />
+    <rect x="122" y="216" width="38" height="104" rx="10" fill="#6D28D9" />
+    <rect x="178" y="156" width="38" height="224" rx="10" fill="#7C3AED" />
+    <rect x="237" y="108" width="38" height="304" rx="10" fill="#4C1D95" />
+    <rect x="296" y="156" width="38" height="224" rx="10" fill="#7C3AED" />
+    <rect x="352" y="216" width="38" height="104" rx="10" fill="#6D28D9" />
+  </g>
+  <text x="172" y="88" fill="#181424" font-family="Segoe UI, system-ui, sans-serif" font-size="52" font-weight="700" letter-spacing="8">AURALIQ</text>
+  <text x="174" y="118" fill="#5B4E7A" font-family="Consolas, ui-monospace, monospace" font-size="14" letter-spacing="3">YOUR MUSIC. YOUR FREQUENCY.</text>
+</svg>

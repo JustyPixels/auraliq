@@ -1,10 +1,12 @@
+![Auraliq Banner](branding/banners/github-banner.svg)
+
 # Auraliq
 
 > **Your music. Your frequency.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-7c3aed.svg)](LICENSE)
 [![Platform: Windows x64](https://img.shields.io/badge/Platform-Windows%2010%2F11%20x64-1e1b4b.svg)](#supported-platforms)
-[![Status: Milestone 1 Foundation](https://img.shields.io/badge/Status-v0.1.0%20Foundation-4c1d95.svg)](ROADMAP.md)
+[![Status: v0.1.0 — Milestone 2](https://img.shields.io/badge/Status-v0.1.0%20Milestone%202-4c1d95.svg)](ROADMAP.md)
 
 A retro-inspired unified music hub built with **Rust + Tauri v2** for local music libraries, compliant online playback, playlists, permitted downloads, and deep UI customization.
 
@@ -22,15 +24,18 @@ Many modern music apps rely on intrusive advertisements, fragmented ecosystems, 
 
 ## Features
 
-### Available (v0.1.0 — Milestone 1 Foundation)
+### Available (v0.1.0 — Milestone 2 Design System & Shell)
 
 - Tauri v2 + Rust (`x86_64-pc-windows-msvc`) + React 19 + TypeScript desktop shell
 - Typed Tauri IPC bridge (`get_app_info`) with graceful browser preview fallback
+- Brand identity assets (`branding/`), custom app icons, and retro `--aq-*` design tokens
+- 5 built-in themes (`Midnight Cassette`, `CRT Purple`, `Analog Amber`, `Retro Terminal`, `Classic Gray`) with Reduced Motion toggle
+- Collapsible sidebar, optional right context panel (`Queue`, `Info`, `Scope`), and persistent bottom player deck shell (transport controls honestly disabled until Milestone 4)
 - Strict Tauri capabilities, restrictive CSP, and automated CI checks
 
 ### In Development
 
-- Retro design system, themes, and customizable layout shell (Milestone 2–3)
+- Customizable sidebar ordering, persistent layout state, and keyboard shortcuts (Milestone 3)
 - Local audio engine (`symphonia` + `cpal` + `rubato`) & SQLite/FTS5 library scanner (Milestone 4)
 
 ### Planned

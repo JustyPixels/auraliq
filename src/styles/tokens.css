@@ -1,0 +1,43 @@
+:root {
+  --aq-bg: #0d0b14;
+  --aq-bg-gradient: radial-gradient(circle at 18% 12%, rgba(139, 92, 246, 0.14), transparent 46%);
+  --aq-surface: #161224;
+  --aq-surface-elevated: #201a33;
+  --aq-surface-inset: #0a0810;
+  --aq-text: #f3effa;
+  --aq-muted: #a49ac0;
+  --aq-accent: #8b5cf6;
+  --aq-accent-hover: #9d74f7;
+  --aq-accent-contrast: #ffffff;
+  --aq-accent-soft: rgba(139, 92, 246, 0.18);
+  --aq-secondary-accent: #38bdf8;
+  --aq-border: #2e2646;
+  --aq-border-highlight: #433866;
+  --aq-ok: #34d399;
+  --aq-warn: #fbbf24;
+  --aq-danger: #f87171;
+
+  --aq-font-sans: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --aq-font-mono: "Cascadia Mono", Consolas, ui-monospace, SFMono-Regular, monospace;
+  --aq-font-display: var(--aq-font-sans);
+
+  --aq-radius-sm: 4px;
+  --aq-radius-md: 8px;
+  --aq-radius-lg: 12px;
+
+  --aq-space-1: 0.25rem;
+  --aq-space-2: 0.5rem;
+  --aq-space-3: 0.75rem;
+  --aq-space-4: 1rem;
+  --aq-space-5: 1.5rem;
+  --aq-space-6: 2rem;
+
+  --aq-sidebar-width: 232px;
+  --aq-sidebar-collapsed-width: 68px;
+  --aq-right-panel-width: 288px;
+  --aq-player-height: 82px;
+
+  --aq-scanlines-opacity: 0;
+  --aq-glow: 0 0 18px rgba(139, 92, 246, 0.25);
+  --aq-transition-fast: 120ms ease;
+}

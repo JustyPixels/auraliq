@@ -30,11 +30,11 @@
 
 ---
 
-## Milestone 2 — Auraliq Design System & Branding (`0.1.x`)
+## Milestone 2 — Auraliq Design System & Branding (`0.1.x`) [COMPLETED]
 
-- [ ] Design application icon, wordmark, compact logo, and GitHub banners
-- [ ] Define retro design tokens (`--aq-*`), typography, and initial themes (Midnight Cassette, CRT Purple, Analog Amber, Retro Terminal, Classic Gray)
-- [ ] Build core retro UI primitives and main layout shell (sidebar, content area, optional right panel, bottom player bar)
+- [x] Design application icon, wordmark, compact logo, and GitHub banners (`branding/`)
+- [x] Define retro design tokens (`--aq-*`), typography, and initial themes (Midnight Cassette, CRT Purple, Analog Amber, Retro Terminal, Classic Gray)
+- [x] Build core retro UI primitives and main layout shell (sidebar, content area, optional right panel, bottom player bar)
 
 ---
 
